@@ -66,7 +66,7 @@ public class ServerStoreCompatibility {
               ((PoolAllocation.Shared)clientPoolAllocation).getResourcePoolName());
         }
     }
-    
+
     isCompatible &= compareField(sb, "storedKeyType", serverConfiguration.getStoredKeyType(), clientConfiguration.getStoredKeyType());
     isCompatible &= compareField(sb, "storedValueType", serverConfiguration.getStoredValueType(), clientConfiguration.getStoredValueType());
     isCompatible &= compareField(sb, "actualKeyType", serverConfiguration.getActualKeyType(), clientConfiguration.getActualKeyType());
