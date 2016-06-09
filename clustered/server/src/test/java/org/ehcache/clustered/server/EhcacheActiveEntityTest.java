@@ -1973,6 +1973,115 @@ public class EhcacheActiveEntityTest {
   }
 
   @Test
+  public void testClientFixedCache_ServerSharedPoolCache() throws Exception {
+    final OffHeapIdentifierRegistry registry = new OffHeapIdentifierRegistry();
+    registry.addResource("serverResource1", 8, MemoryUnit.MEGABYTES);
+
+    ServerSideConfiguration serverSideConfiguration = new ServerSideConfigBuilder()
+            .sharedPool("primary", "serverResource1", 4, MemoryUnit.MEGABYTES)
+            .build();
+
+    ServerSideConfiguration clientSideConfiguration = new ServerSideConfigBuilder()
+            .sharedPool("primary", "serverResource1", 4, MemoryUnit.MEGABYTES)
+            .build();
+
+    final EhcacheActiveEntity activeEntity = new EhcacheActiveEntity(registry, ENTITY_ID);
+    ClientDescriptor client = new TestClientDescriptor();
+    activeEntity.connected(client);
+    assertThat(activeEntity.getConnectedClients().keySet(), contains(client));
+
+    assertSuccess(activeEntity.invoke(client,
+        MESSAGE_FACTORY.configureStoreManager(serverSideConfiguration)));
+
+    assertSuccess(activeEntity.invoke(client,
+        MESSAGE_FACTORY.createServerStore("cacheAlias",
+            new ServerStoreConfigBuilder()
+                .shared("primary")
+                .build())));
+    assertThat(activeEntity.getStores(), containsInAnyOrder("cacheAlias"));
+
+    assertThat(activeEntity.getSharedResourcePoolIds(), containsInAnyOrder("primary"));
+    assertThat(activeEntity.getFixedResourcePoolIds(), is(Matchers.<String>empty()));
+
+    activeEntity.disconnected(client);
+
+    ClientDescriptor client2 = new TestClientDescriptor();
+    activeEntity.connected(client2);
+    assertThat(activeEntity.getConnectedClients().keySet(), containsInAnyOrder(client2));
+
+    assertSuccess(activeEntity.invoke(client2,
+        MESSAGE_FACTORY.validateStoreManager(clientSideConfiguration)));
+
+    String expectedMessageContent = "Existing ServerStore configuration is not compatible with the desired configuration: " +
+                                    "\n\t" +
+                                    "resourcePoolType existing: " +
+                                    PoolAllocation.Shared.class.getName() +
+                                    " desired: " +
+                                    PoolAllocation.Fixed.class.getName();
+
+    assertFailure(activeEntity.invoke(client2,
+        MESSAGE_FACTORY.validateServerStore("cacheAlias",
+            new ServerStoreConfigBuilder()
+                .fixed("primary", 4, MemoryUnit.MEGABYTES)
+                .build())),ClusteredStoreValidationException.class,expectedMessageContent);
+  }
+
+  @Test
+  public void testClientSharedPoolCache_ServerFixedCache() throws Exception {
+    final OffHeapIdentifierRegistry registry = new OffHeapIdentifierRegistry();
+    registry.addResource("serverResource1", 8, MemoryUnit.MEGABYTES);
+
+    ServerSideConfiguration serverSideConfiguration = new ServerSideConfigBuilder()
+            .sharedPool("primary", "serverResource1", 4, MemoryUnit.MEGABYTES)
+            .build();
+
+    ServerSideConfiguration clientSideConfiguration = new ServerSideConfigBuilder()
+            .sharedPool("primary", "serverResource1", 4, MemoryUnit.MEGABYTES)
+            .build();
+
+    final EhcacheActiveEntity activeEntity = new EhcacheActiveEntity(registry, ENTITY_ID);
+    ClientDescriptor client = new TestClientDescriptor();
+    activeEntity.connected(client);
+    assertThat(activeEntity.getConnectedClients().keySet(), contains(client));
+
+    assertSuccess(activeEntity.invoke(client,
+        MESSAGE_FACTORY.configureStoreManager(serverSideConfiguration)));
+
+    assertSuccess(activeEntity.invoke(client,
+        MESSAGE_FACTORY.createServerStore("cacheAlias",
+            new ServerStoreConfigBuilder()
+                .fixed("serverResource1", 4, MemoryUnit.MEGABYTES)
+                .build())));
+    assertThat(activeEntity.getStores(), containsInAnyOrder("cacheAlias"));
+
+    assertThat(activeEntity.getSharedResourcePoolIds(), contains("primary"));
+    assertThat(activeEntity.getFixedResourcePoolIds(), contains("cacheAlias"));
+    assertThat(activeEntity.getInUseStores().get("cacheAlias"), containsInAnyOrder(client));
+
+    activeEntity.disconnected(client);
+
+    ClientDescriptor client2 = new TestClientDescriptor();
+    activeEntity.connected(client2);
+    assertThat(activeEntity.getConnectedClients().keySet(), containsInAnyOrder(client2));
+
+    assertSuccess(activeEntity.invoke(client2,
+        MESSAGE_FACTORY.validateStoreManager(clientSideConfiguration)));
+
+    String expectedMessageContent = "Existing ServerStore configuration is not compatible with the desired configuration: " +
+                                    "\n\t" +
+                                    "resourcePoolType existing: " +
+                                    PoolAllocation.Fixed.class.getName() +
+                                    " desired: " +
+                                    PoolAllocation.Shared.class.getName();
+
+    assertFailure(activeEntity.invoke(client2,
+        MESSAGE_FACTORY.validateServerStore("cacheAlias",
+            new ServerStoreConfigBuilder()
+                .shared("primary")
+                .build())),ClusteredStoreValidationException.class,expectedMessageContent);
+  }
+
+  @Test
   public void testDestroyEmpty() throws Exception {
     final EhcacheActiveEntity activeEntity = new EhcacheActiveEntity(mock(ServiceRegistry.class), ENTITY_ID);
     activeEntity.destroy();
