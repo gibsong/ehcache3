@@ -90,8 +90,21 @@
         </xs:annotation>
       </xs:element>
     </xs:sequence>
+    <xs:attribute name="auto-create" type="tc:auto-create-type" use="required">
+      <xs:annotation>
+        <xs:documentation xml:lang="en">
+          TODO add documentation
+        </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
   </xs:complexType>
 
+  <xs:simpleType name="auto-create-type">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="true"/>
+      <xs:enumeration value="false"/>
+    </xs:restriction>
+  </xs:simpleType>
 
   <xs:complexType name="default-resource-spec">
     <xs:attributeGroup ref="tc:from-required"/>

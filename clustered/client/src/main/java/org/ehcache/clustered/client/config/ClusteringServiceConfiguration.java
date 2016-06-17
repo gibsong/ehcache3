@@ -43,6 +43,7 @@ public final class ClusteringServiceConfiguration
   private final URI clusterUri;
   private final String defaultServerResource;
   private final Map<String, PoolDefinition> pools;
+  private final boolean autoCreate;
 
   /**
    * Creates a {@code ClusteringServiceConfiguration} from the properties provided.
@@ -53,12 +54,13 @@ public final class ClusteringServiceConfiguration
    * @param pools the map of shared resource pool identifier to {@link PoolDefinition}; may be {@code null}
    *              or empty; if any {@code PoolDefinition} omits its server resource identifier,
    *              {@code defaultServerResource} must not be {@code null}
+   * @param autoCreate TODO add documentation
    *
    * @throws NullPointerException if {@code clusterUri} is {@code null}
    * @throws IllegalArgumentException if {@code pools} contains a {@code PoolDefinition} which omits the
    *            resource identifier and {@code defaultServerResource} is {@code null}
    */
-  public ClusteringServiceConfiguration(final URI clusterUri, String defaultServerResource, Map<String, PoolDefinition> pools) {
+  public ClusteringServiceConfiguration(final URI clusterUri, String defaultServerResource, Map<String, PoolDefinition> pools, boolean autoCreate) {
     if (clusterUri == null) {
       throw new NullPointerException("Cluster URI cannot be null");
     }
@@ -80,6 +82,7 @@ public final class ClusteringServiceConfiguration
     this.clusterUri = clusterUri;
     this.defaultServerResource = defaultServerResource;
     this.pools = unmodifiableMap(new HashMap<String, PoolDefinition>(pools));
+    this.autoCreate = autoCreate;
   }
 
   /**
@@ -89,6 +92,15 @@ public final class ClusteringServiceConfiguration
    */
   public URI getClusterUri() {
     return clusterUri;
+  }
+
+  /**
+   * //TODO add documentation
+   * @return
+   */
+  public boolean getAutoCreate()
+  {
+    return autoCreate;
   }
 
   /**

@@ -38,18 +38,18 @@ public class ClusteringServiceConfigurationTest {
 
   @Test(expected = NullPointerException.class)
   public void testGetConnectionUrlNull() throws Exception {
-    new ClusteringServiceConfiguration(null, null, Collections.<String, PoolDefinition>emptyMap());
+    new ClusteringServiceConfiguration(null, null, Collections.<String, PoolDefinition>emptyMap(), false);
   }
 
   @Test
   public void testGetConnectionUrl() throws Exception {
     final URI connectionUrl = URI.create("http://localhost:9450");
-    assertThat(new ClusteringServiceConfiguration(connectionUrl, null, Collections.<String, PoolDefinition>emptyMap()).getClusterUri(), is(connectionUrl));
+    assertThat(new ClusteringServiceConfiguration(connectionUrl, null, Collections.<String, PoolDefinition>emptyMap(), false).getClusterUri(), is(connectionUrl));
   }
 
   @Test
   public void testGetServiceType() throws Exception {
-    assertThat(new ClusteringServiceConfiguration(URI.create("http://localhost:9450"), null, Collections.<String, PoolDefinition>emptyMap()).getServiceType(),
+    assertThat(new ClusteringServiceConfiguration(URI.create("http://localhost:9450"), null, Collections.<String, PoolDefinition>emptyMap(), false).getServiceType(),
         is(equalTo(ClusteringService.class)));
   }
 
@@ -58,7 +58,7 @@ public class ClusteringServiceConfigurationTest {
     Map<String, PoolDefinition> poolDefinitionMap = new HashMap<String, PoolDefinition>();
     poolDefinitionMap.put("sharedPool", new PoolDefinition(8L, MemoryUnit.MB));
     ClusteringServiceConfiguration configuration = new ClusteringServiceConfiguration(
-        URI.create("terracotta://localhost:9450"), "defaultResource", poolDefinitionMap);
+        URI.create("terracotta://localhost:9450"), "defaultResource", poolDefinitionMap, false);
     Map<String, PoolDefinition> actualPools = configuration.getPools();
     assertThat(actualPools.size(), is(1));
     Map.Entry<String, PoolDefinition> actualPool = actualPools.entrySet().iterator().next();
@@ -73,7 +73,7 @@ public class ClusteringServiceConfigurationTest {
     Map<String, PoolDefinition> poolDefinitionMap = new HashMap<String, PoolDefinition>();
     poolDefinitionMap.put("sharedPool", new PoolDefinition(8L, MemoryUnit.MB));
     try {
-      new ClusteringServiceConfiguration(URI.create("terracotta://localhost:9450"), null, poolDefinitionMap);
+      new ClusteringServiceConfiguration(URI.create("terracotta://localhost:9450"), null, poolDefinitionMap, false);
       fail("Expecting IllegalArgumentException");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString(" no default value "));
@@ -82,7 +82,7 @@ public class ClusteringServiceConfigurationTest {
 
   @Test
   public void testBuilder() throws Exception {
-    assertThat(new ClusteringServiceConfiguration(URI.create("http://localhost:9450"), null, Collections.<String, PoolDefinition>emptyMap())
+    assertThat(new ClusteringServiceConfiguration(URI.create("http://localhost:9450"), null, Collections.<String, PoolDefinition>emptyMap(),false)
         .builder(CacheManagerBuilder.newCacheManagerBuilder()), is(instanceOf(CacheManagerBuilder.class)));
   }
 }

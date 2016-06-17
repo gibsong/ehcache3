@@ -34,22 +34,24 @@ public final class ClusteringServiceConfigurationBuilder implements Builder<Clus
   private final URI clusterUri;
   private final String defaultServerResource;
   private final Map<String, PoolDefinition> pools;
-
+  private final boolean autoCreate;
   /**
    * Creates a new builder connecting to the given cluster.
    *
    * @param clusterUri cluster URI
+   * @param autoCreate //TODO add documentation
    *
    * @return a clustering service configuration builder
    */
-  public static ClusteringServiceConfigurationBuilder cluster(URI clusterUri) {
-    return new ClusteringServiceConfigurationBuilder(clusterUri);
+  public static ClusteringServiceConfigurationBuilder cluster(URI clusterUri, boolean autoCreate) {
+    return new ClusteringServiceConfigurationBuilder(clusterUri, autoCreate);
   }
 
-  private ClusteringServiceConfigurationBuilder(URI clusterUri) {
+  private ClusteringServiceConfigurationBuilder(URI clusterUri, boolean autoCreate) {
     this.clusterUri = clusterUri;
     this.defaultServerResource = null;
     this.pools = emptyMap();
+    this.autoCreate = autoCreate;
   }
 
   private ClusteringServiceConfigurationBuilder(ClusteringServiceConfigurationBuilder original, String poolName, PoolDefinition poolDefinition) {
@@ -60,12 +62,14 @@ public final class ClusteringServiceConfigurationBuilder implements Builder<Clus
       throw new IllegalArgumentException("Pool '" + poolName + "' already defined");
     }
     this.pools = unmodifiableMap(pools);
+    this.autoCreate = original.autoCreate;
   }
 
   private ClusteringServiceConfigurationBuilder(ClusteringServiceConfigurationBuilder original, String defaultServerResource) {
     this.clusterUri = original.clusterUri;
     this.defaultServerResource = defaultServerResource;
     this.pools = original.pools;
+    this.autoCreate = original.autoCreate;
   }
 
   /**
@@ -120,6 +124,6 @@ public final class ClusteringServiceConfigurationBuilder implements Builder<Clus
 
   @Override
   public ClusteringServiceConfiguration build() {
-    return new ClusteringServiceConfiguration(clusterUri, defaultServerResource, pools);
+    return new ClusteringServiceConfiguration(clusterUri, defaultServerResource, pools, autoCreate);
   }
 }

@@ -101,6 +101,8 @@ public class ClusteringServiceConfigurationParser implements CacheManagerService
       Map<String, PoolDefinition> sharedPools = null;
       String defaultServerResource = null;
       URI connectionUri = null;
+      boolean autoCreate = Boolean.parseBoolean(fragment.getAttribute("auto-create"));
+
       final NodeList childNodes = fragment.getChildNodes();
       for (int i = 0; i < childNodes.getLength(); i++) {
         final Node item = childNodes.item(i);
@@ -132,7 +134,7 @@ public class ClusteringServiceConfigurationParser implements CacheManagerService
         }
       }
       try {
-        return new ClusteringServiceConfiguration(connectionUri, defaultServerResource, sharedPools);
+        return new ClusteringServiceConfiguration(connectionUri, defaultServerResource, sharedPools, autoCreate);
       } catch (IllegalArgumentException e) {
         throw new XmlConfigurationException(e);
       }
@@ -192,5 +194,6 @@ public class ClusteringServiceConfigurationParser implements CacheManagerService
   private static final class ServerSideConfig {
     private String defaultServerResource;
     private Map<String, PoolDefinition> pools;
+    private boolean autoCreate;
   }
 }

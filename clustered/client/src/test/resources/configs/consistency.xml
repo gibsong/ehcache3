@@ -24,8 +24,8 @@
 
   <service>
     <tc:cluster>
-      <tc:connection url="terracotta://example.com/myCacheManager?auto-create"/>
-      <tc:server-side-config>
+      <tc:connection url="terracotta://example.com/myCacheManager"/>
+      <tc:server-side-config auto-create="true">
         <tc:default-resource from="primary"/>
       </tc:server-side-config>
     </tc:cluster>

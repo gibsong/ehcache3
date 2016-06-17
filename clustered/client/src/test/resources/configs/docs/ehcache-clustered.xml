@@ -23,8 +23,8 @@
         http://www.ehcache.org/v3/clustered http://www.ehcache.org/schema/ehcache-clustered-ext-3.0.xsd">
   <service>
     <tc:cluster>
-      <tc:connection url="terracotta://example.com/myCacheManager?auto-create"/>
-      <tc:server-side-config>
+      <tc:connection url="terracotta://example.com/myCacheManager"/>
+      <tc:server-side-config auto-create="true">
         <tc:default-resource from="primary"/>
       </tc:server-side-config>
     </tc:cluster>

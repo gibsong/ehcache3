@@ -52,33 +52,45 @@ public class ClusteredResourceConfigurationParser implements CacheResourceConfig
   @Override
   public ResourcePool parseResourceConfiguration(final Element fragment) {
     final String elementName = fragment.getLocalName();
-    if ("cluster-shared".equals(elementName)) {
+    if ("cluster-shared".equals(elementName))
+    {
       final String sharing = fragment.getAttribute("sharing");
       return new SharedClusteredResourcePoolImpl(sharing);
 
-    } else if ("cluster-fixed".equals(elementName)) {
+    }
+    else if ("cluster-fixed".equals(elementName))
+    {
       // 'from' attribute is optional on 'cluster-fixed' element
       final Attr fromAttr = fragment.getAttributeNode("from");
       final String from = (fromAttr == null ? null : fromAttr.getValue());
 
       final String unitValue = fragment.getAttribute("unit").toUpperCase();
       final MemoryUnit sizeUnits;
-      try {
+      try
+      {
         sizeUnits = MemoryUnit.valueOf(unitValue);
-      } catch (IllegalArgumentException e) {
+      }
+      catch (IllegalArgumentException e)
+      {
         throw new XmlConfigurationException(String.format("XML configuration element <%s> 'unit' attribute '%s' is not valid", elementName, unitValue), e);
       }
 
       final String sizeValue;
-      try {
+      try
+      {
         sizeValue = fragment.getFirstChild().getNodeValue();
-      } catch (DOMException e) {
+      }
+      catch (DOMException e)
+      {
         throw new XmlConfigurationException(String.format("XML configuration element <%s> value is not valid", elementName), e);
       }
       final long size;
-      try {
+      try
+      {
         size = Long.parseLong(sizeValue);
-      } catch (NumberFormatException e) {
+      }
+      catch (NumberFormatException e)
+      {
         throw new XmlConfigurationException(String.format("XML configuration element <%s> value '%s' is not valid", elementName, sizeValue), e);
       }
 

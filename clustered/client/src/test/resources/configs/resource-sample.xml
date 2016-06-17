@@ -9,8 +9,8 @@
 
   <eh:service>
     <tc:cluster>
-      <tc:connection url="http://example.com:9510/myCacheManager?auto-create"/>
-      <tc:server-side-config>
+      <tc:connection url="http://example.com:9510/myCacheManager"/>
+      <tc:server-side-config auto-create="true">
         <tc:default-resource from="primary"/>
         <tc:shared-pool name="primary-shared-pool" unit="MB">32</tc:shared-pool>
         <tc:shared-pool name="secondary-shared-pool" from="secondary" unit="MB">32</tc:shared-pool>

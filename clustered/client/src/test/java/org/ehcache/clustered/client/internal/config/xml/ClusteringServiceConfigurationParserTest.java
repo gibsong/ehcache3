@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.*;
+import org.w3c.dom.NodeList;
 
 /**
  * @author Clifford W. Johnson
@@ -74,6 +75,47 @@ public class ClusteringServiceConfigurationParserTest {
     final DocumentBuilder domBuilder = factory.newDocumentBuilder();
     final Element schema = domBuilder.parse(schemaSource.getInputStream()).getDocumentElement();
     final Attr targetNamespaceAttr = schema.getAttributeNode("targetNamespace");
+    assertThat(targetNamespaceAttr, is(not(nullValue())));
+    assertThat(targetNamespaceAttr.getValue(), is(parser.getNamespace().toString()));
+  }
+
+  @Test
+  public void output() throws Exception
+  {
+    final ClusteringServiceConfigurationParser parser = new ClusteringServiceConfigurationParser();
+    final StreamSource schemaSource = (StreamSource) parser.getXmlSchema();
+
+    final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    factory.setNamespaceAware(true);
+    factory.setIgnoringComments(true);
+    factory.setIgnoringElementContentWhitespace(true);
+
+    final DocumentBuilder domBuilder = factory.newDocumentBuilder();
+    final Element schema = domBuilder.parse(schemaSource.getInputStream()).getDocumentElement();
+    final Attr targetNamespaceAttr = schema.getAttributeNode("targetNamespace");
+
+    NodeList nodeList = schema.getChildNodes();
+    for(int i = 0; i < nodeList.getLength(); i++)
+    {
+      System.out.println("NodeName: " + nodeList.item(i).getNodeName());
+      System.out.println("NodeType: " + nodeList.item(i).getNodeType());
+      System.out.println("NodeValue: " + nodeList.item(i).getNodeValue());
+      if(nodeList.item(i).hasAttributes())
+      {
+        if(nodeList.item(i).getAttributes().getLength() > 0)
+        {
+          for(int j=0; j<nodeList.item(i).getAttributes().getLength();j++)
+          {
+            System.out.println("attribute: " + nodeList.item(i).getAttributes().item(j));
+          }
+
+        }
+
+      }
+
+      //System.out.println("Text: " + nodeList.item(i).getTextContent());
+    }
+
     assertThat(targetNamespaceAttr, is(not(nullValue())));
     assertThat(targetNamespaceAttr.getValue(), is(parser.getNamespace().toString()));
   }

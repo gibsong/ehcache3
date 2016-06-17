@@ -103,7 +103,7 @@ public class ClusteredStoreTest {
 
   @After
   public void tearDown() throws Exception {
-    UnitTestConnectionService.remove("terracotta://localhost:9510/my-application?auto-create");
+    UnitTestConnectionService.remove("terracotta://localhost:9510/my-application");
   }
 
   @Test

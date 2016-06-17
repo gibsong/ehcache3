@@ -77,7 +77,6 @@ class DefaultClusteringService implements ClusteringService {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultClusteringService.class);
 
-  private static final String AUTO_CREATE_QUERY = "auto-create";
   static final String CONNECTION_PREFIX = "Ehcache:";
 
   private final ClusteringServiceConfiguration configuration;
@@ -99,7 +98,7 @@ class DefaultClusteringService implements ClusteringService {
     this.entityIdentifier = clusterUri.relativize(ehcacheUri).getPath();
     this.serverConfiguration =
         new ServerSideConfiguration(configuration.getDefaultServerResource(), extractResourcePools(configuration));
-    this.autoCreate = AUTO_CREATE_QUERY.equalsIgnoreCase(ehcacheUri.getQuery());
+    this.autoCreate = configuration.getAutoCreate();
   }
 
   private static URI extractClusterUri(URI uri) {
