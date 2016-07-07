@@ -46,7 +46,7 @@ public interface ClusteringService extends PersistableResourceService {
    *
    * @throws CachePersistenceException if the {@code cacheIdentifier} is unknown or the {@code ServerStoreProxy} cannot be created
    */
-  <K, V> ServerStoreProxy getServerStoreProxy(ClusteredCacheIdentifier cacheIdentifier, final Store.Configuration<K, V> storeConfig, Consistency consistency) throws CachePersistenceException;
+  <K, V> ServerStoreProxy getServerStoreProxy(ClusteredCacheIdentifier cacheIdentifier, final Store.Configuration<K, V> storeConfig, Consistency consistency, int configuredConcurrency) throws CachePersistenceException;
 
   /**
    * Releases access to a {@link ServerStoreProxy} and the server-resident {@code ServerStore} it represents.
