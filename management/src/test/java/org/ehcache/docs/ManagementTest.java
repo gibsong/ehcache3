@@ -21,8 +21,12 @@ import org.ehcache.config.CacheConfiguration;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.management.ManagementRegistryService;
 import org.ehcache.management.registry.DefaultManagementRegistryService;
+import org.terracotta.management.model.stats.Sample;
+import org.terracotta.management.model.stats.history.CounterHistory;
+import org.terracotta.management.model.stats.history.RatioHistory;
 import org.terracotta.management.registry.ResultSet;
 import org.ehcache.management.SharedManagementService;
 import org.ehcache.management.registry.DefaultManagementRegistryConfiguration;
@@ -38,6 +42,7 @@ import org.terracotta.management.model.context.ContextContainer;
 import org.terracotta.management.model.stats.ContextualStatistics;
 import org.terracotta.management.model.stats.primitive.Counter;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -46,7 +51,8 @@ public class ManagementTest {
   @Test
   public void usingManagementRegistry() throws Exception {
     // tag::usingManagementRegistry[]
-    CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, ResourcePoolsBuilder.heap(10))
+    CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class,
+        ResourcePoolsBuilder.heap(10).offheap(10, MemoryUnit.MB))
         .build();
 
     DefaultManagementRegistryConfiguration registryConfiguration = new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager"); // <1>
@@ -58,23 +64,29 @@ public class ManagementTest {
 
 
     Cache<Long, String> aCache = cacheManager.getCache("aCache", Long.class, String.class);
+    aCache.put(0L, "zero");
     aCache.get(0L); // <4>
     aCache.get(0L);
     aCache.get(0L);
 
+    Thread.sleep(1100);
+
     Context context = createContext(managementRegistry); // <5>
 
     ContextualStatistics counters = managementRegistry.withCapability("StatisticsCapability") // <6>
-        .queryStatistic("GetCounter")
+        .queryStatistics(Arrays.asList("OnHeapStore_Hit_Count", "OffHeapStore_Hit_Count", "Cache_Hit_Count"))
         .on(context)
         .build()
         .execute()
         .getSingleResult();
 
-    Assert.assertThat(counters.size(), Matchers.is(1));
-    Counter getCounter = counters.getStatistic(Counter.class);
+    Assert.assertThat(counters.size(), Matchers.is(3));
+    CounterHistory onHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OnHeapStore_Hit_Count");
+    CounterHistory offHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OffHeapStore_Hit_Count");
+    CounterHistory cache_Hit_Count = counters.getStatistic(CounterHistory.class, "Cache_Hit_Count");
 
-    Assert.assertThat(getCounter.getValue(), Matchers.equalTo(3L)); // <7>
+    Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(3L)); // <7>
+    Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(3L)); // <7>
 
     cacheManager.close();
     // end::usingManagementRegistry[]

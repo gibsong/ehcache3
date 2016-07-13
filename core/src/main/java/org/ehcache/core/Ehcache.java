@@ -52,6 +52,9 @@ import org.ehcache.core.statistics.CacheOperationOutcomes.PutOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveAllOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.ReplaceOutcome;
+import org.ehcache.core.statistics.CachingTierOperationOutcomes;
+import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.expiry.Expiry;
 import org.ehcache.spi.loaderwriter.BulkCacheLoadingException;
 import org.ehcache.spi.loaderwriter.BulkCacheWritingException;
@@ -65,12 +68,14 @@ import org.ehcache.core.spi.LifeCycled;
 import org.ehcache.spi.loaderwriter.CacheLoaderWriter;
 import org.ehcache.core.statistics.BulkOps;
 import org.slf4j.Logger;
+import org.terracotta.statistics.OperationStatistic;
 import org.terracotta.statistics.StatisticsManager;
 import org.terracotta.statistics.jsr166e.LongAdder;
 import org.terracotta.statistics.observer.OperationObserver;
 
 import static org.ehcache.core.exceptions.ExceptionFactory.newCacheLoadingException;
 import static org.ehcache.core.internal.util.ValueSuppliers.supplierOf;
+import static org.ehcache.core.statistics.TierOperationStatistic.set;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -102,6 +107,7 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
   private final OperationObserver<PutIfAbsentOutcome> putIfAbsentObserver = operation(PutIfAbsentOutcome.class).named("putIfAbsent").of(this).tag("cache").build();
   private final OperationObserver<ReplaceOutcome> replaceObserver = operation(ReplaceOutcome.class).named("replace").of(this).tag("cache").build();
   private final Map<BulkOps, LongAdder> bulkMethodEntries = new EnumMap<BulkOps, LongAdder>(BulkOps.class);
+  private TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierResults.GetResult> daStore;
 
   /**
    * Creates a new {@code Ehcache} based on the provided parameters.
@@ -120,6 +126,24 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
     this.store = store;
     runtimeConfiguration.addCacheConfigurationListener(store.getConfigurationChangeListeners());
     StatisticsManager.associate(store).withParent(this);
+
+    if (!TierOperationStatistic.existsOperationStat(store, "tier")) {
+      OperationStatistic<StoreOperationOutcomes.GetOutcome> shadow2 = TierOperationStatistic.findOperationStat(store, "get");
+      daStore = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, StoreOperationOutcomes.GetOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<StoreOperationOutcomes.GetOutcome>>() {{
+        put(TierOperationStatistic.TierResults.GetResult.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
+        put(TierOperationStatistic.TierResults.GetResult.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
+      }}, "get", 1000, store.getClass().getSimpleName());
+      StatisticsManager.associate(daStore).withParent(store);
+    } else {
+      daStore = null;
+    }
+
+
+    // if (tags=[tier] stuff exists under store) {
+    //   do nothing
+    // } else {
+    //   create store aliasing stats here with priority = 100
+    // }
     if (store instanceof RecoveryCache) {
       this.resilienceStrategy = new LoggingRobustResilienceStrategy<K, V>(castToRecoveryCache(store));
     } else {
