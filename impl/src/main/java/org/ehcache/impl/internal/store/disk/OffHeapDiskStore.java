@@ -111,7 +111,7 @@ public class OffHeapDiskStore<K, V> extends AbstractOffHeapStore<K, V> implement
   public OffHeapDiskStore(FileBasedPersistenceContext fileBasedPersistenceContext,
                           ExecutionService executionService, String threadPoolAlias, int writerConcurrency,
                           final Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher, long sizeInBytes) {
-    super("local-disk", config, timeSource, eventDispatcher);
+    super("local-disk", "Disk", config, timeSource, eventDispatcher);
     this.fileBasedPersistenceContext = fileBasedPersistenceContext;
     this.executionService = executionService;
     this.threadPoolAlias = threadPoolAlias;

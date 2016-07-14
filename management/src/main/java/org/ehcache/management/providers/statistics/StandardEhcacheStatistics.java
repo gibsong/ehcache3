@@ -25,7 +25,9 @@ import org.terracotta.context.extended.OperationStatisticDescriptor;
 import org.terracotta.context.extended.RegisteredCompoundStatistic;
 import org.terracotta.context.extended.RegisteredRatioStatistic;
 import org.terracotta.context.extended.RegisteredStatistic;
+import org.terracotta.context.extended.RegisteredValueStatistic;
 import org.terracotta.context.extended.StatisticsRegistry;
+import org.terracotta.context.extended.ValueStatisticDescriptor;
 import org.terracotta.management.model.capabilities.descriptors.Descriptor;
 import org.terracotta.management.model.stats.NumberUnit;
 import org.terracotta.management.model.stats.Sample;
@@ -50,25 +52,29 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-class EhcacheStatistics extends ExposedCacheBinding {
+class StandardEhcacheStatistics extends ExposedCacheBinding {
 
   private final StatisticsRegistry statisticsRegistry;
 
-  EhcacheStatistics(ManagementRegistryServiceConfiguration registryConfiguration, CacheBinding cacheBinding, StatisticsProviderConfiguration statisticsProviderConfiguration, ScheduledExecutorService executor) {
+  StandardEhcacheStatistics(ManagementRegistryServiceConfiguration registryConfiguration, CacheBinding cacheBinding, StatisticsProviderConfiguration statisticsProviderConfiguration, ScheduledExecutorService executor) {
     super(registryConfiguration, cacheBinding);
     this.statisticsRegistry = new StatisticsRegistry(cacheBinding.getCache(), executor, statisticsProviderConfiguration.averageWindowDuration(),
         statisticsProviderConfiguration.averageWindowUnit(), statisticsProviderConfiguration.historySize(), statisticsProviderConfiguration.historyInterval(), statisticsProviderConfiguration.historyIntervalUnit(),
         statisticsProviderConfiguration.timeToDisable(), statisticsProviderConfiguration.timeToDisableUnit());
 
-    statisticsRegistry.registerCompoundOperations("Cache_Hit", OperationStatisticDescriptor.descriptor("get", Collections.singleton("cache"), CacheOperationOutcomes.GetOutcome.class), EnumSet.of(CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER, CacheOperationOutcomes.GetOutcome.HIT_WITH_LOADER));
-    statisticsRegistry.registerCompoundOperations("Cache_Miss", OperationStatisticDescriptor.descriptor("get", Collections.singleton("cache"), CacheOperationOutcomes.GetOutcome.class), EnumSet.of(CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER, CacheOperationOutcomes.GetOutcome.MISS_WITH_LOADER));
+    statisticsRegistry.registerCompoundOperations("Cache:Hit", OperationStatisticDescriptor.descriptor("get", Collections.singleton("cache"), CacheOperationOutcomes.GetOutcome.class), EnumSet.of(CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER, CacheOperationOutcomes.GetOutcome.HIT_WITH_LOADER));
+    statisticsRegistry.registerCompoundOperations("Cache:Miss", OperationStatisticDescriptor.descriptor("get", Collections.singleton("cache"), CacheOperationOutcomes.GetOutcome.class), EnumSet.of(CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER, CacheOperationOutcomes.GetOutcome.MISS_WITH_LOADER));
     statisticsRegistry.registerCompoundOperations("Hit", OperationStatisticDescriptor.descriptor("get", Collections.singleton("tier"), TierOperationStatistic.TierResults.GetResult.class), EnumSet.of(TierOperationStatistic.TierResults.GetResult.HIT));
     statisticsRegistry.registerCompoundOperations("Miss", OperationStatisticDescriptor.descriptor("get", Collections.singleton("tier"), TierOperationStatistic.TierResults.GetResult.class), EnumSet.of(TierOperationStatistic.TierResults.GetResult.MISS));
-    statisticsRegistry.registerRatios("Hit_Ratio", OperationStatisticDescriptor.descriptor("get", Collections.singleton("tier"), TierOperationStatistic.TierResults.GetResult.class), EnumSet.of(TierOperationStatistic.TierResults.GetResult.HIT), EnumSet.of(TierOperationStatistic.TierResults.GetResult.MISS));
+    statisticsRegistry.registerRatios("HitRatio", OperationStatisticDescriptor.descriptor("get", Collections.singleton("tier"), TierOperationStatistic.TierResults.GetResult.class), EnumSet.of(TierOperationStatistic.TierResults.GetResult.HIT), EnumSet.of(TierOperationStatistic.TierResults.GetResult.MISS));
+    statisticsRegistry.registerValue("MappingCount", ValueStatisticDescriptor.descriptor("mappings", Collections.singleton("tier")));
+    statisticsRegistry.registerValue("MaxMappingCount", ValueStatisticDescriptor.descriptor("maxMappings", Collections.singleton("tier")));
+    statisticsRegistry.registerValue("AllocatedBytesCount", ValueStatisticDescriptor.descriptor("allocatedMemory", Collections.singleton("tier")));
+    statisticsRegistry.registerValue("OccupiedBytesCount", ValueStatisticDescriptor.descriptor("occupiedMemory", Collections.singleton("tier")));
 
     Map<String, RegisteredStatistic> registrations = statisticsRegistry.getRegistrations();
     for (RegisteredStatistic registeredStatistic : registrations.values()) {
-      registeredStatistic.getCompoundOperation().setAlwaysOn(true);
+      registeredStatistic.getSupport().setAlwaysOn(true);
     }
   }
 
@@ -78,36 +84,44 @@ class EhcacheStatistics extends ExposedCacheBinding {
     for (Map.Entry<String, RegisteredStatistic> entry : registrations.entrySet()) {
       String name = entry.getKey();
       RegisteredStatistic registeredStatistic = entry.getValue();
-      CompoundOperation<?> compoundOperation = registeredStatistic.getCompoundOperation();
 
       if (registeredStatistic instanceof RegisteredCompoundStatistic) {
         RegisteredCompoundStatistic registeredCompoundStatistic = (RegisteredCompoundStatistic) registeredStatistic;
+        CompoundOperation<?> compoundOperation = registeredCompoundStatistic.getCompoundOperation();
 
-        if ((name + "_Count").equals(statisticName)) {
+        if ((name + "Count").equals(statisticName)) {
           SampledStatistic<Long> count = compoundOperation.compound((Set) registeredCompoundStatistic.getCompound()).count();
           return new CounterHistory(buildHistory(count, since), NumberUnit.COUNT);
-        } else if ((name + "_Rate").equals(statisticName)) {
+        } else if ((name + "Rate").equals(statisticName)) {
           SampledStatistic<Double> rate = compoundOperation.compound((Set) registeredCompoundStatistic.getCompound()).rate();
           return new RateHistory(buildHistory(rate, since), TimeUnit.SECONDS);
 
-        } else if ((name + "_LatencyMinimum").equals(statisticName)) {
+        } else if ((name + "LatencyMinimum").equals(statisticName)) {
           SampledStatistic<Long> minimum = compoundOperation.compound((Set) registeredCompoundStatistic.getCompound()).latency().minimum();
           return new DurationHistory(buildHistory(minimum, since), TimeUnit.NANOSECONDS);
 
-        } else if ((name + "_LatencyMaximum").equals(statisticName)) {
+        } else if ((name + "LatencyMaximum").equals(statisticName)) {
           SampledStatistic<Long> maximum = compoundOperation.compound((Set) registeredCompoundStatistic.getCompound()).latency().maximum();
           return new DurationHistory(buildHistory(maximum, since), TimeUnit.NANOSECONDS);
 
-        } else if ((name + "_LatencyAverage").equals(statisticName)) {
+        } else if ((name + "LatencyAverage").equals(statisticName)) {
           SampledStatistic<Double> average = compoundOperation.compound((Set) registeredCompoundStatistic.getCompound()).latency().average();
           return new AverageHistory(buildHistory(average, since), TimeUnit.NANOSECONDS);
         }
       } else if (registeredStatistic instanceof RegisteredRatioStatistic) {
         RegisteredRatioStatistic registeredRatioStatistic = (RegisteredRatioStatistic) registeredStatistic;
+        CompoundOperation<?> compoundOperation = registeredRatioStatistic.getCompoundOperation();
 
         if (name.equals(statisticName)) {
           SampledStatistic<Double> ratio = (SampledStatistic) compoundOperation.ratioOf((Set) registeredRatioStatistic.getNumerator(), (Set) registeredRatioStatistic.getDenominator());
           return new RatioHistory(buildHistory(ratio, since), NumberUnit.RATIO);
+        }
+      } else if (registeredStatistic instanceof RegisteredValueStatistic) {
+        RegisteredValueStatistic registeredValueStatistic = (RegisteredValueStatistic) registeredStatistic;
+
+        if (name.equals(statisticName)) {
+          SampledStatistic<Long> count = (SampledStatistic<Long>) registeredValueStatistic.getSampledStatistic();
+          return new CounterHistory(buildHistory(count, since), NumberUnit.COUNT);
         }
       } else {
         throw new UnsupportedOperationException("Cannot handle registered statistic type : " + registeredStatistic);

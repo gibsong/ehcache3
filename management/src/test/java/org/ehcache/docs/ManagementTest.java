@@ -52,7 +52,7 @@ public class ManagementTest {
   public void usingManagementRegistry() throws Exception {
     // tag::usingManagementRegistry[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class,
-        ResourcePoolsBuilder.heap(10).offheap(10, MemoryUnit.MB))
+        ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB).offheap(10, MemoryUnit.MB))
         .build();
 
     DefaultManagementRegistryConfiguration registryConfiguration = new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager"); // <1>
@@ -64,6 +64,7 @@ public class ManagementTest {
 
 
     Cache<Long, String> aCache = cacheManager.getCache("aCache", Long.class, String.class);
+    aCache.put(-1L, "-one");
     aCache.put(0L, "zero");
     aCache.get(0L); // <4>
     aCache.get(0L);
@@ -74,19 +75,24 @@ public class ManagementTest {
     Context context = createContext(managementRegistry); // <5>
 
     ContextualStatistics counters = managementRegistry.withCapability("StatisticsCapability") // <6>
-        .queryStatistics(Arrays.asList("OnHeapStore_Hit_Count", "OffHeapStore_Hit_Count", "Cache_Hit_Count"))
+        .queryStatistics(Arrays.asList("OnHeap:HitCount", "OffHeap:HitCount", "Cache:HitCount", "OffHeap:OccupiedBytesCount", "OffHeap:MappingCount"))
         .on(context)
         .build()
         .execute()
         .getSingleResult();
 
-    Assert.assertThat(counters.size(), Matchers.is(3));
-    CounterHistory onHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OnHeapStore_Hit_Count");
-    CounterHistory offHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OffHeapStore_Hit_Count");
-    CounterHistory cache_Hit_Count = counters.getStatistic(CounterHistory.class, "Cache_Hit_Count");
+    Assert.assertThat(counters.size(), Matchers.is(5));
+    CounterHistory onHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OnHeap:HitCount");
+    CounterHistory offHeapStore_Hit_Count = counters.getStatistic(CounterHistory.class, "OffHeap:HitCount");
+    CounterHistory cache_Hit_Count = counters.getStatistic(CounterHistory.class, "Cache:HitCount");
+    CounterHistory offHeapStore_Mapping_Count = counters.getStatistic(CounterHistory.class, "OffHeap:MappingCount");
+    CounterHistory offHeapStore_OccupiedBytes_Count = counters.getStatistic(CounterHistory.class, "OffHeap:OccupiedBytesCount");
 
     Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(3L)); // <7>
     Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(3L)); // <7>
+
+    System.out.println("offheap mappings: " + offHeapStore_Mapping_Count.getValue()[0].getValue());
+    System.out.println("offheap used bytes: " + offHeapStore_OccupiedBytes_Count.getValue()[0].getValue());
 
     cacheManager.close();
     // end::usingManagementRegistry[]

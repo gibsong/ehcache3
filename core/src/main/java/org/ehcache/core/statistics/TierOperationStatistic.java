@@ -61,7 +61,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
   private final OperationStatistic<S> shadow;
   private final HashMap<D, Set<S>> xlatMap;
 
-  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, OperationStatistic<S> shadow, HashMap<D, Set<S>> xlatMap, String name, int priority, String alias) {
+  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, OperationStatistic<S> shadow, HashMap<D, Set<S>> xlatMap, String name, int priority, String discriminator) {
     this.aliasing = aliasing;
     this.shadow = shadow;
     this.xlatMap = xlatMap;
@@ -70,7 +70,9 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     this.tags.add("tier");
     this.properties = new HashMap<String, Object>();
     this.properties.put("priority", priority);
-    this.properties.put("alias", alias);
+    if (discriminator != null) {
+      this.properties.put("discriminator", discriminator);
+    }
     this.type = aliasing;
 
     EnumSet<D> ds = EnumSet.allOf(aliasing);
@@ -173,6 +175,27 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
   @Override
   public void end(D result, long... parameters) {
     throw new UnsupportedOperationException();
+  }
+
+  public static String findDiscriminator(Object rootNode) {
+    Set<TreeNode> results = queryBuilder().chain(self())
+        .children().filter(
+            context(attributes(Matchers.allOf(
+                hasAttribute("discriminator", new Matcher<Object>() {
+                  @Override
+                  protected boolean matchesSafely(Object object) {
+                    return object instanceof String;
+                  }
+                }))))).build().execute(Collections.singleton(ContextManager.nodeFor(rootNode)));
+
+    if (results.size() > 1) {
+      throw new IllegalStateException("More than one discriminator attribute found");
+    } else if (results.isEmpty()) {
+      return null;
+    } else {
+      TreeNode node = results.iterator().next();
+      return (String) node.getContext().attributes().get("discriminator");
+    }
   }
 
   public static OperationStatistic findOperationStat(Object rootNode, final String statName) {

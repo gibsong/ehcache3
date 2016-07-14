@@ -72,7 +72,7 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
   private volatile EhcacheConcurrentOffHeapClockCache<K, OffHeapValueHolder<V>> map;
 
   public OffHeapStore(final Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher, long sizeInBytes) {
-    super("local-offheap", config, timeSource, eventDispatcher);
+    super("local-offheap", "OffHeap", config, timeSource, eventDispatcher);
     EvictionAdvisor<? super K, ? super V> evictionAdvisor = config.getEvictionAdvisor();
     if (evictionAdvisor != null) {
       this.evictionAdvisor = wrap(evictionAdvisor);

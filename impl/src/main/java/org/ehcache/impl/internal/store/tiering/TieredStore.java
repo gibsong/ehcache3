@@ -107,7 +107,7 @@ public class TieredStore<K, V> implements Store<K, V> {
       caching = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
         put(TierOperationStatistic.TierResults.GetResult.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
         put(TierOperationStatistic.TierResults.GetResult.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
-      }}, "get", 100, cachingTier.getClass().getSimpleName());
+      }}, "get", 100, TierOperationStatistic.findDiscriminator(cachingTier));
       StatisticsManager.associate(caching).withParent(cachingTier);
     } else {
       caching = null;
@@ -125,7 +125,7 @@ public class TieredStore<K, V> implements Store<K, V> {
     authority = new TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class, shadow1, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome>>() {{
       put(TierOperationStatistic.TierResults.GetResult.HIT, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT));
       put(TierOperationStatistic.TierResults.GetResult.MISS, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS));
-    }}, "get", 1000, authoritativeTier.getClass().getSimpleName());
+    }}, "get", 1000, TierOperationStatistic.findDiscriminator(authoritativeTier));
     StatisticsManager.associate(authority).withParent(authoritativeTier);
 
 

@@ -132,7 +132,7 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
       daStore = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, StoreOperationOutcomes.GetOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<StoreOperationOutcomes.GetOutcome>>() {{
         put(TierOperationStatistic.TierResults.GetResult.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
         put(TierOperationStatistic.TierResults.GetResult.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
-      }}, "get", 1000, store.getClass().getSimpleName());
+      }}, "get", 1000, TierOperationStatistic.findDiscriminator(store));
       StatisticsManager.associate(daStore).withParent(store);
     } else {
       daStore = null;

@@ -94,14 +94,14 @@ public class CompoundCachingTier<K, V> implements CachingTier<K, V> {
     high = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
       put(TierOperationStatistic.TierResults.GetResult.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
       put(TierOperationStatistic.TierResults.GetResult.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
-    }}, "get", 10, higher.getClass().getSimpleName());
+    }}, "get", 10, TierOperationStatistic.findDiscriminator(higher));
     StatisticsManager.associate(high).withParent(higher);
 
     OperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome> shadow1 = TierOperationStatistic.findOperationStat(lower, "getAndRemove");
     low = new TierOperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.class, shadow1, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome>>() {{
       put(TierOperationStatistic.TierResults.GetResult.HIT, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED));
       put(TierOperationStatistic.TierResults.GetResult.MISS, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.MISS));
-    }}, "get", 100, lower.getClass().getSimpleName());
+    }}, "get", 100, TierOperationStatistic.findDiscriminator(lower));
     StatisticsManager.associate(low).withParent(lower);
   }
 

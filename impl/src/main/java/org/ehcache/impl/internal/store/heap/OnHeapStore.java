@@ -152,6 +152,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
   private final Copier<V> valueCopier;
 
   private final SizeOfEngine sizeOfEngine;
+  private final boolean byteSized;
 
   private volatile long capacity;
   private final EvictionAdvisor<? super K, ? super V> evictionAdvisor;
@@ -221,7 +222,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
       throw new IllegalArgumentException("OnHeap store must be configured with a resource of type 'heap'");
     }
     this.sizeOfEngine = sizeOfEngine;
-    boolean byteSized = this.sizeOfEngine instanceof NoopSizeOfEngine ? false : true;
+    this.byteSized = this.sizeOfEngine instanceof NoopSizeOfEngine ? false : true;
     this.capacity = byteSized ? ((MemoryUnit) heapPool.getUnit()).toBytes(heapPool.getSize()) : heapPool.getSize();
     this.timeSource = timeSource;
     if (config.getEvictionAdvisor() == null) {
@@ -259,10 +260,44 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     silentInvalidateObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateOutcome.class).named("silentInvalidate").of(this).tag("onheap-store").build();
     silentInvalidateAllObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllOutcome.class).named("silentInvalidateAll").of(this).tag("onheap-store").build();
     silentInvalidateAllWithHashObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllWithHashOutcome.class).named("silentInvalidateAllWithHash").of(this).tag("onheap-store").build();
-    StatisticsManager.createPassThroughStatistic(this, "mappingsCount", Collections.singleton("onheap-store"), new Callable<Number>() {
+
+    Set<String> tags = new HashSet<String>(Arrays.asList("onheap-store", "tier"));
+    Map<String, Object> properties = new HashMap<String, Object>();
+    properties.put("discriminator", "OnHeap");
+    StatisticsManager.createPassThroughStatistic(this, "mappings", tags, properties, new Callable<Number>() {
       @Override
       public Number call() throws Exception {
         return map.mappingCount();
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "maxMappings", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        if (byteSized) {
+          return -1L;
+        } else {
+          return capacity;
+        }
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "allocatedMemory", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        if (byteSized) {
+          return capacity;
+        } else {
+          return -1L;
+        }
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "occupiedMemory", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        if (byteSized) {
+          return map.byteSize();
+        } else {
+          return -1L;
+        }
       }
     });
   }
@@ -1744,6 +1779,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     @ContextAttribute("tags") private final Set<String> tags = new HashSet<String>(Arrays.asList("store"));
     @ContextAttribute("cachingTier") private final CachingTier<?, ?> cachingTier;
     @ContextAttribute("authoritativeTier") private final OnHeapStore<?, ?> authoritativeTier;
+    @ContextAttribute("discriminator") private final String discriminator = "OnHeap";
 
     OnHeapStoreStatsSettings(OnHeapStore<?, ?> onHeapStore) {
       this.cachingTier = null;
