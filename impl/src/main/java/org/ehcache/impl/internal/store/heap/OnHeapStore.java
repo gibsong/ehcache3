@@ -1663,7 +1663,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
     private volatile ServiceProvider<Service> serviceProvider;
     private final Map<Store<?, ?>, List<Copier>> createdStores = new ConcurrentWeakIdentityHashMap<Store<?, ?>, List<Copier>>();
-    private final Map<OnHeapStore<?, ?>, TierOperationStatistic> tierOperationStatistics = new ConcurrentWeakIdentityHashMap<OnHeapStore<?, ?>, TierOperationStatistic>();
+    private final Map<OnHeapStore<?, ?>, Collection<TierOperationStatistic<?, ?>>> tierOperationStatistics = new ConcurrentWeakIdentityHashMap<OnHeapStore<?, ?>, Collection<TierOperationStatistic<?, ?>>>();
 
     @Override
     public int rank(final Set<ResourceType<?>> resourceTypes, final Collection<ServiceConfiguration<?>> serviceConfigs) {
@@ -1678,14 +1678,23 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     @Override
     public <K, V> OnHeapStore<K, V> createStore(final Configuration<K, V> storeConfig, final ServiceConfiguration<?>... serviceConfigs) {
       OnHeapStore<K, V> store = createStoreInternal(storeConfig, new ScopedStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+      Collection<TierOperationStatistic<?, ?>> tieredOps = new ArrayList<TierOperationStatistic<?, ?>>();
 
-      TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, StoreOperationOutcomes.GetOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<StoreOperationOutcomes.GetOutcome>>() {{
+      TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> get = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, StoreOperationOutcomes.GetOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<StoreOperationOutcomes.GetOutcome>>() {{
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
       }}, "get", 1000, "get");
-      StatisticsManager.associate(tierOperationStatistic).withParent(store);
-      tierOperationStatistics.put(store, tierOperationStatistic);
+      StatisticsManager.associate(get).withParent(store);
+      tieredOps.add(get);
 
+      TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome> evict = new TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome>(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.class, StoreOperationOutcomes.EvictionOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.EvictionOutcome, Set<StoreOperationOutcomes.EvictionOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.SUCCESS, set(StoreOperationOutcomes.EvictionOutcome.SUCCESS));
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.FAILURE, set(StoreOperationOutcomes.EvictionOutcome.FAILURE));
+      }}, "eviction", 1000, "eviction");
+      StatisticsManager.associate(evict).withParent(store);
+      tieredOps.add(evict);
+
+      tierOperationStatistics.put(store, tieredOps);
       return store;
     }
 
@@ -1755,14 +1764,23 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     @Override
     public <K, V> CachingTier<K, V> createCachingTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
       OnHeapStore<K, V> cachingTier = createStoreInternal(storeConfig, NullStoreEventDispatcher.<K, V>nullStoreEventDispatcher(), serviceConfigs);
+      Collection<TierOperationStatistic<?, ?>> tieredOps = new ArrayList<TierOperationStatistic<?, ?>>();
 
-      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, cachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
+      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> get = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, cachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
       }}, "get", 100, "getOrComputeIfAbsent");
-      StatisticsManager.associate(tierOperationStatistic).withParent(cachingTier);
-      tierOperationStatistics.put(cachingTier, tierOperationStatistic);
+      StatisticsManager.associate(get).withParent(cachingTier);
+      tieredOps.add(get);
 
+      TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome> evict = new TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome>(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.class, StoreOperationOutcomes.EvictionOutcome.class, cachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.EvictionOutcome, Set<StoreOperationOutcomes.EvictionOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.SUCCESS, set(StoreOperationOutcomes.EvictionOutcome.SUCCESS));
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.FAILURE, set(StoreOperationOutcomes.EvictionOutcome.FAILURE));
+      }}, "eviction", 100, "eviction");
+      StatisticsManager.associate(evict).withParent(cachingTier);
+      tieredOps.add(evict);
+
+      tierOperationStatistics.put(cachingTier, tieredOps);
       return cachingTier;
     }
 
@@ -1785,14 +1803,23 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     @Override
     public <K, V> HigherCachingTier<K, V> createHigherCachingTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
       OnHeapStore<K, V> higherCachingTier = createStore(storeConfig, serviceConfigs);
+      Collection<TierOperationStatistic<?, ?>> tieredOps = new ArrayList<TierOperationStatistic<?, ?>>();
 
-      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, higherCachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
+      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> get = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, higherCachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
         put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
       }}, "get", 10, "getOrComputeIfAbsent");
-      StatisticsManager.associate(tierOperationStatistic).withParent(higherCachingTier);
-      tierOperationStatistics.put(higherCachingTier, tierOperationStatistic);
+      StatisticsManager.associate(get).withParent(higherCachingTier);
+      tieredOps.add(get);
 
+      TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome> evict = new TierOperationStatistic<StoreOperationOutcomes.EvictionOutcome, TierOperationStatistic.TierOperationOutcomes.EvictionOutcome>(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.class, StoreOperationOutcomes.EvictionOutcome.class, higherCachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.EvictionOutcome, Set<StoreOperationOutcomes.EvictionOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.SUCCESS, set(StoreOperationOutcomes.EvictionOutcome.SUCCESS));
+        put(TierOperationStatistic.TierOperationOutcomes.EvictionOutcome.FAILURE, set(StoreOperationOutcomes.EvictionOutcome.FAILURE));
+      }}, "eviction", 10, "eviction");
+      StatisticsManager.associate(evict).withParent(higherCachingTier);
+      tieredOps.add(evict);
+
+      tierOperationStatistics.put(higherCachingTier, tieredOps);
       return higherCachingTier;
     }
 

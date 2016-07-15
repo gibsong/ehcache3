@@ -224,6 +224,11 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
       MISS,
     }
 
+    public enum EvictionOutcome {
+      SUCCESS,
+      FAILURE
+    }
+
   }
 
 }
