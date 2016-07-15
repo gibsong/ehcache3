@@ -23,9 +23,6 @@ import org.ehcache.core.spi.store.StoreAccessException;
 import org.ehcache.core.spi.function.BiFunction;
 import org.ehcache.core.spi.function.Function;
 import org.ehcache.core.spi.function.NullaryFunction;
-import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
-import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.impl.internal.store.disk.OffHeapDiskStore;
 import org.ehcache.impl.internal.store.heap.OnHeapStore;
 import org.ehcache.impl.internal.store.offheap.OffHeapStore;
@@ -41,7 +38,6 @@ import org.ehcache.spi.service.ServiceDependencies;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.context.annotations.ContextAttribute;
-import org.terracotta.statistics.OperationStatistic;
 import org.terracotta.statistics.StatisticsManager;
 
 import java.util.AbstractMap;
@@ -71,8 +67,6 @@ public class TieredStore<K, V> implements Store<K, V> {
   private final AuthoritativeTier<K, V> authoritativeTier;
 
   private final TieringStoreStatsSettings tieringStoreStatsSettings;
-  private final TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierResults.GetResult> authority;
-  private final TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult> caching;
 
 
   public TieredStore(CachingTier<K, V> cachingTier, AuthoritativeTier<K, V> authoritativeTier) {
@@ -102,32 +96,7 @@ public class TieredStore<K, V> implements Store<K, V> {
     });
 
     StatisticsManager.associate(cachingTier).withParent(this);
-    if (!TierOperationStatistic.existsOperationStat(cachingTier, "tier")) {
-      OperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome> shadow2 = TierOperationStatistic.findOperationStat(cachingTier, "getOrComputeIfAbsent");
-      caching = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
-        put(TierOperationStatistic.TierResults.GetResult.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
-        put(TierOperationStatistic.TierResults.GetResult.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
-      }}, "get", 100, TierOperationStatistic.findDiscriminator(cachingTier));
-      StatisticsManager.associate(caching).withParent(cachingTier);
-    } else {
-      caching = null;
-    }
-    // if (tags=[tier] stuff exists under cachingTier) {
-    //   do nothing
-    // } else {
-    //   create caching tier aliasing stats here with priority = 10
-    // }
-
     StatisticsManager.associate(authoritativeTier).withParent(this);
-    //   create authoritative tier aliasing stats here with priority = 100
-
-    OperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome> shadow1 = TierOperationStatistic.findOperationStat(authoritativeTier, "getAndFault");
-    authority = new TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class, shadow1, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome>>() {{
-      put(TierOperationStatistic.TierResults.GetResult.HIT, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT));
-      put(TierOperationStatistic.TierResults.GetResult.MISS, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS));
-    }}, "get", 1000, TierOperationStatistic.findDiscriminator(authoritativeTier));
-    StatisticsManager.associate(authority).withParent(authoritativeTier);
-
 
     tieringStoreStatsSettings = new TieringStoreStatsSettings(cachingTier, authoritativeTier);
     StatisticsManager.associate(tieringStoreStatsSettings).withParent(this);

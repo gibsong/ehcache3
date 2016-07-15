@@ -25,18 +25,14 @@ import org.terracotta.statistics.OperationStatistic;
 import org.terracotta.statistics.ValueStatistic;
 import org.terracotta.statistics.observer.ChainedOperationObserver;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import static org.terracotta.context.query.Matchers.attributes;
 import static org.terracotta.context.query.Matchers.context;
@@ -58,18 +54,19 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
   @ContextAttribute("type") public final Class<D> type;
 
   private final Class<D> aliasing;
-  private final OperationStatistic<S> shadow;
+  private final OperationStatistic<S> operationStatistic;
   private final HashMap<D, Set<S>> xlatMap;
 
-  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, OperationStatistic<S> shadow, HashMap<D, Set<S>> xlatMap, String name, int priority, String discriminator) {
+  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, Object tier, HashMap<D, Set<S>> xlatMap, String name, int priority, String operationName) {
     this.aliasing = aliasing;
-    this.shadow = shadow;
+    this.operationStatistic = TierOperationStatistic.findOperationStat(tier, operationName);;
     this.xlatMap = xlatMap;
     this.name = name;
     this.tags = new HashSet<String>();
     this.tags.add("tier");
     this.properties = new HashMap<String, Object>();
     this.properties.put("priority", priority);
+    String discriminator = TierOperationStatistic.findDiscriminator(tier);
     if (discriminator != null) {
       this.properties.put("discriminator", discriminator);
     }
@@ -101,7 +98,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
 
   @Override
   public ValueStatistic<Long> statistic(D result) {
-    return shadow.statistic(xlatMap.get(result));
+    return operationStatistic.statistic(xlatMap.get(result));
   }
 
   @Override
@@ -110,7 +107,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     for (D result : results) {
       xlated.addAll(xlatMap.get(result));
     }
-    return shadow.statistic(xlated);
+    return operationStatistic.statistic(xlated);
   }
 
   @Override
@@ -118,7 +115,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     long value = 0L;
     Set<S> s = xlatMap.get(type);
     for (S s1 : s) {
-      value += shadow.count(s1);
+      value += operationStatistic.count(s1);
     }
     return value;
   }
@@ -129,17 +126,17 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     for (D type : types) {
       xlated.addAll(xlatMap.get(type));
     }
-    return shadow.sum(xlated);
+    return operationStatistic.sum(xlated);
   }
 
   @Override
   public long sum() {
-    return shadow.sum();
+    return operationStatistic.sum();
   }
 
   @Override
   public void addDerivedStatistic(final ChainedOperationObserver<? super D> derived) {
-    shadow.addDerivedStatistic(new ChainedOperationObserver<S>() {
+    operationStatistic.addDerivedStatistic(new ChainedOperationObserver<S>() {
       @Override
       public void begin(long time) {
         derived.begin(time);
@@ -159,7 +156,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
 
   @Override
   public void removeDerivedStatistic(ChainedOperationObserver<? super D> derived) {
-    shadow.removeDerivedStatistic((ChainedOperationObserver<? super S>) derived);
+    operationStatistic.removeDerivedStatistic((ChainedOperationObserver<? super S>) derived);
   }
 
   @Override
@@ -177,7 +174,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     throw new UnsupportedOperationException();
   }
 
-  public static String findDiscriminator(Object rootNode) {
+  private static String findDiscriminator(Object rootNode) {
     Set<TreeNode> results = queryBuilder().chain(self())
         .children().filter(
             context(attributes(Matchers.allOf(
@@ -198,7 +195,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     }
   }
 
-  public static OperationStatistic findOperationStat(Object rootNode, final String statName) {
+  private static OperationStatistic findOperationStat(Object rootNode, final String statName) {
     Query q = queryBuilder().chain(self())
         .descendants().filter(context(identifier(subclassOf(OperationStatistic.class)))).build();
 
@@ -216,63 +213,17 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
     return (OperationStatistic) node.getContext().attributes().get("this");
   }
 
-  public static SortedMap<Integer, OperationStatistic> findTiers(Object rootNode) {
-    Query q = queryBuilder().chain(self())
-        .descendants().filter(context(identifier(subclassOf(OperationStatistic.class)))).build();
-
-    Set<TreeNode> operationStatisticNodes = q.execute(Collections.singleton(ContextManager.nodeFor(rootNode)));
-    Set<TreeNode> result = queryBuilder()
-        .filter(
-            context(attributes(Matchers.allOf(
-                hasAttribute("tags", new Matcher<Set<String>>() {
-                  @Override
-                  protected boolean matchesSafely(Set<String> object) {
-                    return object.contains("tier");
-                  }
-                }))))).build().execute(operationStatisticNodes);
-
-
-    SortedMap<Integer, OperationStatistic> rc = new TreeMap<Integer, OperationStatistic>();
-    for (TreeNode node : result) {
-      OperationStatistic opStat = (OperationStatistic) node.getContext().attributes().get("this");
-      Map<String, Object> properties = (Map<String, Object>) node.getContext().attributes().get("properties");
-      Integer priority = (Integer) properties.get("priority");
-      rc.put(priority, opStat);
-    }
-    return rc;
-  }
-
-  public static boolean existsOperationStat(Object rootNode, final String tag) {
-    Query q = queryBuilder().chain(self())
-        .descendants().filter(context(identifier(subclassOf(OperationStatistic.class)))).build();
-
-    Set<TreeNode> operationStatisticNodes = q.execute(Collections.singleton(ContextManager.nodeFor(rootNode)));
-    Set<TreeNode> result = queryBuilder()
-        .filter(
-            context(attributes(Matchers.allOf(
-                hasAttribute("tags", new Matcher<Set<String>>() {
-                  @Override
-                  protected boolean matchesSafely(Set<String> object) {
-                    return object.contains(tag);
-                  }
-                }))))).build().execute(operationStatisticNodes);
-
-    return !result.isEmpty();
-  }
-
-
   public static <X> Set<X> set(X... xs) {
     return new HashSet<X>(Arrays.asList(xs));
   }
 
-  public static class TierResults {
+  public static class TierOperationOutcomes {
 
-    public enum GetResult {
+    public enum GetOutcome {
       HIT,
       MISS,
     }
 
   }
-
 
 }

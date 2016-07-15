@@ -25,9 +25,6 @@ import org.ehcache.core.spi.store.StoreAccessException;
 import org.ehcache.core.spi.store.tiering.CachingTier;
 import org.ehcache.core.spi.store.tiering.HigherCachingTier;
 import org.ehcache.core.spi.store.tiering.LowerCachingTier;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
-import org.ehcache.core.statistics.LowerCachingTierOperationsOutcome;
-import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.impl.internal.store.heap.OnHeapStore;
 import org.ehcache.impl.internal.store.offheap.OffHeapStore;
 import org.ehcache.spi.service.Service;
@@ -36,14 +33,12 @@ import org.ehcache.spi.service.ServiceDependencies;
 import org.ehcache.spi.service.ServiceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.statistics.OperationStatistic;
 import org.terracotta.statistics.StatisticsManager;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +47,6 @@ import java.util.concurrent.ConcurrentMap;
 import static java.util.Collections.unmodifiableSet;
 import static org.ehcache.config.ResourceType.Core.HEAP;
 import static org.ehcache.config.ResourceType.Core.OFFHEAP;
-import static org.ehcache.core.statistics.TierOperationStatistic.set;
 
 /**
  * A {@link CachingTier} implementation supporting a cache hierarchy.
@@ -64,8 +58,6 @@ public class CompoundCachingTier<K, V> implements CachingTier<K, V> {
   private final HigherCachingTier<K, V> higher;
   private final LowerCachingTier<K, V> lower;
   private volatile InvalidationListener<K, V> invalidationListener;
-  private final TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult> high;
-  private final TierOperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome, TierOperationStatistic.TierResults.GetResult> low;
 
   public CompoundCachingTier(HigherCachingTier<K, V> higher, final LowerCachingTier<K, V> lower) {
     this.higher = higher;
@@ -89,20 +81,6 @@ public class CompoundCachingTier<K, V> implements CachingTier<K, V> {
 
     StatisticsManager.associate(higher).withParent(this);
     StatisticsManager.associate(lower).withParent(this);
-
-    OperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome> shadow2 = TierOperationStatistic.findOperationStat(higher, "getOrComputeIfAbsent");
-    high = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
-      put(TierOperationStatistic.TierResults.GetResult.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
-      put(TierOperationStatistic.TierResults.GetResult.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
-    }}, "get", 10, TierOperationStatistic.findDiscriminator(higher));
-    StatisticsManager.associate(high).withParent(higher);
-
-    OperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome> shadow1 = TierOperationStatistic.findOperationStat(lower, "getAndRemove");
-    low = new TierOperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.class, shadow1, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome>>() {{
-      put(TierOperationStatistic.TierResults.GetResult.HIT, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED));
-      put(TierOperationStatistic.TierResults.GetResult.MISS, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.MISS));
-    }}, "get", 100, TierOperationStatistic.findDiscriminator(lower));
-    StatisticsManager.associate(low).withParent(lower);
   }
 
   private void notifyInvalidation(K key, Store.ValueHolder<V> p) {

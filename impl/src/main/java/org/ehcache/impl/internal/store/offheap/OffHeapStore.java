@@ -24,6 +24,10 @@ import org.ehcache.config.ResourceType;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.core.events.StoreEventDispatcher;
 import org.ehcache.core.spi.store.StoreAccessException;
+import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
+import org.ehcache.core.statistics.LowerCachingTierOperationsOutcome;
+import org.ehcache.core.statistics.StoreOperationOutcomes;
+import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.impl.internal.events.NullStoreEventDispatcher;
 import org.ehcache.impl.internal.events.ThreadLocalStoreEventDispatcher;
 import org.ehcache.impl.internal.store.offheap.factories.EhcacheSegmentFactory;
@@ -54,9 +58,12 @@ import org.terracotta.statistics.StatisticsManager;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static org.ehcache.core.statistics.TierOperationStatistic.set;
 import static org.ehcache.impl.internal.store.offheap.OffHeapStoreUtils.getBufferSource;
 
 /**
@@ -124,6 +131,7 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
 
     private volatile ServiceProvider<Service> serviceProvider;
     private final Set<Store<?, ?>> createdStores = Collections.newSetFromMap(new ConcurrentWeakIdentityHashMap<Store<?, ?>, Boolean>());
+    private final Map<OffHeapStore<?, ?>, TierOperationStatistic> tierOperationStatistics = new ConcurrentWeakIdentityHashMap<OffHeapStore<?, ?>, TierOperationStatistic>();
 
     @Override
     public int rank(final Set<ResourceType<?>> resourceTypes, final Collection<ServiceConfiguration<?>> serviceConfigs) {
@@ -137,7 +145,16 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
 
     @Override
     public <K, V> OffHeapStore<K, V> createStore(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStoreInternal(storeConfig, new ThreadLocalStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+      OffHeapStore<K, V> store = createStoreInternal(storeConfig, new ThreadLocalStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+
+      TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, StoreOperationOutcomes.GetOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<StoreOperationOutcomes.GetOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
+      }}, "get", 1000, "get");
+      StatisticsManager.associate(tierOperationStatistic).withParent(store);
+      tierOperationStatistics.put(store, tierOperationStatistic);
+
+      return store;
     }
 
     private <K, V> OffHeapStore<K, V> createStoreInternal(Configuration<K, V> storeConfig, StoreEventDispatcher<K, V> eventDispatcher, ServiceConfiguration<?>... serviceConfigs) {
@@ -166,7 +183,8 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
       close((OffHeapStore)resource);
     }
 
-    static void close(final OffHeapStore resource) {EhcacheConcurrentOffHeapClockCache<Object, OffHeapValueHolder<Object>> localMap = resource.map;
+    static void close(final OffHeapStore resource) {
+      EhcacheConcurrentOffHeapClockCache<Object, OffHeapValueHolder<Object>> localMap = resource.map;
       if (localMap != null) {
         resource.map = null;
         localMap.destroy();
@@ -199,7 +217,16 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
 
     @Override
     public <K, V> AuthoritativeTier<K, V> createAuthoritativeTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStore(storeConfig, serviceConfigs);
+      OffHeapStore<K, V> authoritativeTier = createStoreInternal(storeConfig, new ThreadLocalStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+
+      TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class, authoritativeTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS));
+      }}, "get", 1000, "getAndFault");
+      StatisticsManager.associate(tierOperationStatistic).withParent(authoritativeTier);
+      tierOperationStatistics.put(authoritativeTier, tierOperationStatistic);
+
+      return authoritativeTier;
     }
 
     @Override
@@ -214,7 +241,16 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
 
     @Override
     public <K, V> LowerCachingTier<K, V> createCachingTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStoreInternal(storeConfig, NullStoreEventDispatcher.<K, V>nullStoreEventDispatcher(), serviceConfigs);
+      OffHeapStore<K, V> lowerCachingTier = createStoreInternal(storeConfig, NullStoreEventDispatcher.<K, V>nullStoreEventDispatcher(), serviceConfigs);
+
+      TierOperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.class, lowerCachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<LowerCachingTierOperationsOutcome.GetAndRemoveOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.HIT_REMOVED));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(LowerCachingTierOperationsOutcome.GetAndRemoveOutcome.MISS));
+      }}, "get", 100, "getAndRemove");
+      StatisticsManager.associate(tierOperationStatistic).withParent(lowerCachingTier);
+      tierOperationStatistics.put(lowerCachingTier, tierOperationStatistic);
+
+      return lowerCachingTier;
     }
 
     @Override

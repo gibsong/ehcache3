@@ -46,9 +46,11 @@ import org.ehcache.core.spi.store.StoreAccessTimeoutException;
 import org.ehcache.core.spi.store.events.StoreEventSource;
 import org.ehcache.core.spi.store.StoreAccessException;
 import org.ehcache.core.spi.store.tiering.AuthoritativeTier;
+import org.ehcache.core.statistics.AuthoritativeTierOperationOutcomes;
 import org.ehcache.core.statistics.StoreOperationOutcomes;
 import org.ehcache.core.spi.time.TimeSource;
 import org.ehcache.core.spi.time.TimeSourceService;
+import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.impl.config.loaderwriter.DefaultCacheLoaderWriterConfiguration;
 import org.ehcache.impl.internal.events.NullStoreEventDispatcher;
 import org.ehcache.spi.service.ServiceProvider;
@@ -73,6 +75,7 @@ import java.util.concurrent.TimeoutException;
 import static java.util.Collections.singleton;
 import static org.ehcache.core.exceptions.StorePassThroughException.handleRuntimeException;
 import static org.ehcache.core.internal.service.ServiceLocator.findSingletonAmongst;
+import static org.ehcache.core.statistics.TierOperationStatistic.set;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -99,6 +102,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
   private final OperationObserver<StoreOperationOutcomes.ConditionalReplaceOutcome> conditionalReplaceObserver;
   // Needed for JSR-107 compatibility even if unused
   private final OperationObserver<StoreOperationOutcomes.EvictionOutcome> evictionObserver;
+  private final OperationObserver<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome> getAndFaultObserver;
 
   private final ClusteredStoreStatsSettings clusteredStoreStatsSettings;
 
@@ -115,7 +119,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     this.replaceObserver = operation(StoreOperationOutcomes.ReplaceOutcome.class).of(this).named("replace").tag(STATISTICS_TAG).build();
     this.conditionalReplaceObserver = operation(StoreOperationOutcomes.ConditionalReplaceOutcome.class).of(this).named("conditionalReplace").tag(STATISTICS_TAG).build();
     this.evictionObserver = operation(StoreOperationOutcomes.EvictionOutcome.class).of(this).named("eviction").tag(STATISTICS_TAG).build();
-
+    this.getAndFaultObserver = operation(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class).of(this).named("getAndFault").tag(STATISTICS_TAG).build();
     this.clusteredStoreStatsSettings = new ClusteredStoreStatsSettings(this);
   }
 
@@ -143,6 +147,15 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     } else {
       getObserver.end(StoreOperationOutcomes.GetOutcome.HIT);
       return new ClusteredValueHolder<V>(value);
+    }
+  }
+
+  private V getQuiet(K key) throws StoreAccessException {
+    try {
+      return getInternal(key);
+    } catch (TimeoutException e) {
+      // Don't count as a MISS
+      return null;
     }
   }
 
@@ -472,7 +485,22 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
 
   @Override
   public ValueHolder<V> getAndFault(K key) throws StoreAccessException {
-    return get(key);
+    getAndFaultObserver.begin();
+    V value;
+    try {
+      value = getInternal(key);
+    } catch (TimeoutException e) {
+      //TODO
+      getAndFaultObserver.end(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS);
+      return null;
+    }
+    if(value == null) {
+      getAndFaultObserver.end(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS);
+      return null;
+    } else {
+      getAndFaultObserver.end(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT);
+      return new ClusteredValueHolder<V>(value);
+    }
   }
 
   @Override
@@ -510,16 +538,29 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     private volatile ClusteringService clusteringService;
 
     private final Map<Store<?, ?>, StoreConfig> createdStores = new ConcurrentWeakIdentityHashMap<Store<?, ?>, StoreConfig>();
+    private final Map<ClusteredStore<?, ?>, TierOperationStatistic> tierOperationStatistics = new ConcurrentWeakIdentityHashMap<ClusteredStore<?, ?>, TierOperationStatistic>();
 
     @Override
     public <K, V> ClusteredStore<K, V> createStore(final Configuration<K, V> storeConfig, final ServiceConfiguration<?>... serviceConfigs) {
+      ClusteredStore<K, V> store = createStoreInternal(storeConfig, serviceConfigs);
 
-      DefaultCacheLoaderWriterConfiguration loaderWriterConfiguration = findSingletonAmongst(DefaultCacheLoaderWriterConfiguration.class, (Object[])serviceConfigs);
+      TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, StoreOperationOutcomes.GetOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<StoreOperationOutcomes.GetOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
+      }}, "get", 1000, "get");
+      StatisticsManager.associate(tierOperationStatistic).withParent(store);
+      tierOperationStatistics.put(store, tierOperationStatistic);
+
+      return store;
+    }
+
+    private <K, V> ClusteredStore<K, V> createStoreInternal(Configuration<K, V> storeConfig, Object[] serviceConfigs) {
+      DefaultCacheLoaderWriterConfiguration loaderWriterConfiguration = findSingletonAmongst(DefaultCacheLoaderWriterConfiguration.class, serviceConfigs);
       if (loaderWriterConfiguration != null) {
         throw new IllegalStateException("CacheLoaderWriter is not supported with clustered tiers");
       }
 
-      CacheEventListenerConfiguration eventListenerConfiguration = findSingletonAmongst(CacheEventListenerConfiguration.class, (Object[])serviceConfigs);
+      CacheEventListenerConfiguration eventListenerConfiguration = findSingletonAmongst(CacheEventListenerConfiguration.class, serviceConfigs);
       if (eventListenerConfiguration != null) {
         throw new IllegalStateException("CacheEventListener is not supported with clustered tiers");
       }
@@ -539,11 +580,11 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
         throw new IllegalStateException(Provider.class.getCanonicalName() + ".createStore can not create clustered tier with multiple clustered resources");
       }
 
-      ClusteredStoreConfiguration clusteredStoreConfiguration = findSingletonAmongst(ClusteredStoreConfiguration.class, (Object[])serviceConfigs);
+      ClusteredStoreConfiguration clusteredStoreConfiguration = findSingletonAmongst(ClusteredStoreConfiguration.class, serviceConfigs);
       if (clusteredStoreConfiguration == null) {
         clusteredStoreConfiguration = new ClusteredStoreConfiguration();
       }
-      ClusteredCacheIdentifier cacheId = findSingletonAmongst(ClusteredCacheIdentifier.class, (Object[]) serviceConfigs);
+      ClusteredCacheIdentifier cacheId = findSingletonAmongst(ClusteredCacheIdentifier.class, serviceConfigs);
 
       TimeSource timeSource = serviceProvider.getService(TimeSourceService.class).getTimeSource();
 
@@ -641,7 +682,16 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
 
     @Override
     public <K, V> AuthoritativeTier<K, V> createAuthoritativeTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStore(storeConfig, serviceConfigs);
+      ClusteredStore<K, V> authoritativeTier = createStoreInternal(storeConfig, serviceConfigs);
+
+      TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class, authoritativeTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS));
+      }}, "get", 1000, "getAndFault");
+      StatisticsManager.associate(tierOperationStatistic).withParent(authoritativeTier);
+      tierOperationStatistics.put(authoritativeTier, tierOperationStatistic);
+
+      return authoritativeTier;
     }
 
     @Override

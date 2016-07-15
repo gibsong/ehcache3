@@ -30,6 +30,7 @@ import org.ehcache.core.events.StoreEventDispatcher;
 import org.ehcache.core.events.StoreEventSink;
 import org.ehcache.core.spi.store.StoreAccessException;
 import org.ehcache.core.spi.store.heap.LimitExceededException;
+import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expiry;
 import org.ehcache.core.spi.function.BiFunction;
@@ -90,6 +91,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.ehcache.core.exceptions.StorePassThroughException.handleRuntimeException;
 import static org.ehcache.core.internal.util.ValueSuppliers.supplierOf;
+import static org.ehcache.core.statistics.TierOperationStatistic.set;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -1659,6 +1661,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
     private volatile ServiceProvider<Service> serviceProvider;
     private final Map<Store<?, ?>, List<Copier>> createdStores = new ConcurrentWeakIdentityHashMap<Store<?, ?>, List<Copier>>();
+    private final Map<OnHeapStore<?, ?>, TierOperationStatistic> tierOperationStatistics = new ConcurrentWeakIdentityHashMap<OnHeapStore<?, ?>, TierOperationStatistic>();
 
     @Override
     public int rank(final Set<ResourceType<?>> resourceTypes, final Collection<ServiceConfiguration<?>> serviceConfigs) {
@@ -1672,7 +1675,16 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
     @Override
     public <K, V> OnHeapStore<K, V> createStore(final Configuration<K, V> storeConfig, final ServiceConfiguration<?>... serviceConfigs) {
-      return createStoreInternal(storeConfig, new ScopedStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+      OnHeapStore<K, V> store = createStoreInternal(storeConfig, new ScopedStoreEventDispatcher<K, V>(storeConfig.getDispatcherConcurrency()), serviceConfigs);
+
+      TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, StoreOperationOutcomes.GetOutcome.class, store, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<StoreOperationOutcomes.GetOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
+      }}, "get", 1000, "get");
+      StatisticsManager.associate(tierOperationStatistic).withParent(store);
+      tierOperationStatistics.put(store, tierOperationStatistic);
+
+      return store;
     }
 
     public <K, V> OnHeapStore<K, V> createStoreInternal(final Configuration<K, V> storeConfig, final StoreEventDispatcher<K, V> eventDispatcher,
@@ -1740,7 +1752,16 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
     @Override
     public <K, V> CachingTier<K, V> createCachingTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStoreInternal(storeConfig, NullStoreEventDispatcher.<K, V>nullStoreEventDispatcher(), serviceConfigs);
+      OnHeapStore<K, V> cachingTier = createStoreInternal(storeConfig, NullStoreEventDispatcher.<K, V>nullStoreEventDispatcher(), serviceConfigs);
+
+      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, cachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
+      }}, "get", 100, "getOrComputeIfAbsent");
+      StatisticsManager.associate(tierOperationStatistic).withParent(cachingTier);
+      tierOperationStatistics.put(cachingTier, tierOperationStatistic);
+
+      return cachingTier;
     }
 
     @Override
@@ -1761,7 +1782,16 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
     @Override
     public <K, V> HigherCachingTier<K, V> createHigherCachingTier(Configuration<K, V> storeConfig, ServiceConfiguration<?>... serviceConfigs) {
-      return createStore(storeConfig, serviceConfigs);
+      OnHeapStore<K, V> higherCachingTier = createStore(storeConfig, serviceConfigs);
+
+      TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome> tierOperationStatistic = new TierOperationStatistic<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome, TierOperationStatistic.TierOperationOutcomes.GetOutcome>(TierOperationStatistic.TierOperationOutcomes.GetOutcome.class, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class, higherCachingTier, new HashMap<TierOperationStatistic.TierOperationOutcomes.GetOutcome, Set<CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome>>() {{
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.HIT, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.HIT));
+        put(TierOperationStatistic.TierOperationOutcomes.GetOutcome.MISS, set(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULTED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.FAULT_FAILED_MISS, CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.MISS));
+      }}, "get", 10, "getOrComputeIfAbsent");
+      StatisticsManager.associate(tierOperationStatistic).withParent(higherCachingTier);
+      tierOperationStatistics.put(higherCachingTier, tierOperationStatistic);
+
+      return higherCachingTier;
     }
 
     @Override

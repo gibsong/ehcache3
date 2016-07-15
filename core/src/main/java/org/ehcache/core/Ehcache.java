@@ -45,16 +45,13 @@ import org.ehcache.core.spi.store.Store.RemoveStatus;
 import org.ehcache.core.spi.store.Store.ReplaceStatus;
 import org.ehcache.core.statistics.CacheOperationOutcomes.ConditionalRemoveOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.GetAllOutcome;
-import org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.PutAllOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.PutIfAbsentOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.PutOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveAllOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.ReplaceOutcome;
-import org.ehcache.core.statistics.CachingTierOperationOutcomes;
 import org.ehcache.core.statistics.StoreOperationOutcomes;
-import org.ehcache.core.statistics.TierOperationStatistic;
 import org.ehcache.expiry.Expiry;
 import org.ehcache.spi.loaderwriter.BulkCacheLoadingException;
 import org.ehcache.spi.loaderwriter.BulkCacheWritingException;
@@ -68,14 +65,12 @@ import org.ehcache.core.spi.LifeCycled;
 import org.ehcache.spi.loaderwriter.CacheLoaderWriter;
 import org.ehcache.core.statistics.BulkOps;
 import org.slf4j.Logger;
-import org.terracotta.statistics.OperationStatistic;
 import org.terracotta.statistics.StatisticsManager;
 import org.terracotta.statistics.jsr166e.LongAdder;
 import org.terracotta.statistics.observer.OperationObserver;
 
 import static org.ehcache.core.exceptions.ExceptionFactory.newCacheLoadingException;
 import static org.ehcache.core.internal.util.ValueSuppliers.supplierOf;
-import static org.ehcache.core.statistics.TierOperationStatistic.set;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -97,7 +92,7 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
   private final Jsr107CacheImpl jsr107Cache;
   protected final Logger logger;
 
-  private final OperationObserver<GetOutcome> getObserver = operation(GetOutcome.class).named("get").of(this).tag("cache").build();
+  private final OperationObserver<org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome> getObserver = operation(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.class).named("get").of(this).tag("cache").build();
   private final OperationObserver<GetAllOutcome> getAllObserver = operation(GetAllOutcome.class).named("getAll").of(this).tag("cache").build();
   private final OperationObserver<PutOutcome> putObserver = operation(PutOutcome.class).named("put").of(this).tag("cache").build();
   private final OperationObserver<PutAllOutcome> putAllObserver = operation(PutAllOutcome.class).named("putAll").of(this).tag("cache").build();
@@ -107,7 +102,6 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
   private final OperationObserver<PutIfAbsentOutcome> putIfAbsentObserver = operation(PutIfAbsentOutcome.class).named("putIfAbsent").of(this).tag("cache").build();
   private final OperationObserver<ReplaceOutcome> replaceObserver = operation(ReplaceOutcome.class).named("replace").of(this).tag("cache").build();
   private final Map<BulkOps, LongAdder> bulkMethodEntries = new EnumMap<BulkOps, LongAdder>(BulkOps.class);
-  private TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierResults.GetResult> daStore;
 
   /**
    * Creates a new {@code Ehcache} based on the provided parameters.
@@ -127,23 +121,6 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
     runtimeConfiguration.addCacheConfigurationListener(store.getConfigurationChangeListeners());
     StatisticsManager.associate(store).withParent(this);
 
-    if (!TierOperationStatistic.existsOperationStat(store, "tier")) {
-      OperationStatistic<StoreOperationOutcomes.GetOutcome> shadow2 = TierOperationStatistic.findOperationStat(store, "get");
-      daStore = new TierOperationStatistic<StoreOperationOutcomes.GetOutcome, TierOperationStatistic.TierResults.GetResult>(TierOperationStatistic.TierResults.GetResult.class, StoreOperationOutcomes.GetOutcome.class, shadow2, new HashMap<TierOperationStatistic.TierResults.GetResult, Set<StoreOperationOutcomes.GetOutcome>>() {{
-        put(TierOperationStatistic.TierResults.GetResult.HIT, set(StoreOperationOutcomes.GetOutcome.HIT));
-        put(TierOperationStatistic.TierResults.GetResult.MISS, set(StoreOperationOutcomes.GetOutcome.MISS));
-      }}, "get", 1000, TierOperationStatistic.findDiscriminator(store));
-      StatisticsManager.associate(daStore).withParent(store);
-    } else {
-      daStore = null;
-    }
-
-
-    // if (tags=[tier] stuff exists under store) {
-    //   do nothing
-    // } else {
-    //   create store aliasing stats here with priority = 100
-    // }
     if (store instanceof RecoveryCache) {
       this.resilienceStrategy = new LoggingRobustResilienceStrategy<K, V>(castToRecoveryCache(store));
     } else {
@@ -192,17 +169,17 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
 
       // Check for expiry first
       if (valueHolder == null) {
-        getObserver.end(GetOutcome.MISS_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER);
         return null;
       } else {
-        getObserver.end(GetOutcome.HIT_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER);
         return valueHolder.value();
       }
     } catch (StoreAccessException e) {
       try {
         return resilienceStrategy.getFailure(key, e);
       } finally {
-        getObserver.end(GetOutcome.FAILURE);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.FAILURE);
       }
     }
   }
@@ -759,9 +736,9 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
           @Override
           public V apply(K mappedKey, V mappedValue) {
             if (mappedValue == null) {
-              getObserver.end(GetOutcome.MISS_NO_LOADER);
+              getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER);
             } else {
-              getObserver.end(GetOutcome.HIT_NO_LOADER);
+              getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER);
             }
 
             V newValue = computeFunction.apply(mappedKey, mappedValue);
@@ -810,17 +787,17 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
           }
         });
       } catch (StoreAccessException e) {
-        getObserver.end(GetOutcome.FAILURE);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.FAILURE);
         removeObserver.end(RemoveOutcome.FAILURE);
         throw new RuntimeException(e);
       }
 
       V returnValue = existingValue.get();
       if (returnValue != null) {
-        getObserver.end(GetOutcome.HIT_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER);
         removeObserver.end(RemoveOutcome.SUCCESS);
       } else {
-        getObserver.end(GetOutcome.MISS_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER);
       }
       return returnValue;
     }
@@ -845,17 +822,17 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
           }
         });
       } catch (StoreAccessException e) {
-        getObserver.end(GetOutcome.FAILURE);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.FAILURE);
         putObserver.end(PutOutcome.FAILURE);
         throw new RuntimeException(e);
       }
 
       V returnValue = existingValue.get();
       if (returnValue != null) {
-        getObserver.end(GetOutcome.HIT_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER);
         putObserver.end(PutOutcome.UPDATED);
       } else {
-        getObserver.end(GetOutcome.MISS_NO_LOADER);
+        getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.MISS_NO_LOADER);
         putObserver.end(PutOutcome.PUT);
       }
       return returnValue;
@@ -926,12 +903,12 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
 
       if (!quiet) getObserver.begin();
       if (nextException == null) {
-        if (!quiet) getObserver.end(GetOutcome.HIT_NO_LOADER);
+        if (!quiet) getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.HIT_NO_LOADER);
         current = next;
         advance();
         return new ValueHolderBasedEntry<K, V>(current);
       } else {
-        if (!quiet) getObserver.end(GetOutcome.FAILURE);
+        if (!quiet) getObserver.end(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.FAILURE);
         StoreAccessException cae = nextException;
         nextException = null;
         return resilienceStrategy.iteratorFailure(cae);
