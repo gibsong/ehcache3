@@ -72,6 +72,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.Collections.singleton;
@@ -124,6 +125,34 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     this.conditionalReplaceObserver = operation(StoreOperationOutcomes.ConditionalReplaceOutcome.class).of(this).named("conditionalReplace").tag(STATISTICS_TAG).build();
     this.evictionObserver = operation(StoreOperationOutcomes.EvictionOutcome.class).of(this).named("eviction").tag(STATISTICS_TAG).build();
     this.getAndFaultObserver = operation(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class).of(this).named("getAndFault").tag(STATISTICS_TAG).build();
+
+    Set<String> tags = new HashSet<String>(Arrays.asList(STATISTICS_TAG, "tier"));
+    Map<String, Object> properties = new HashMap<String, Object>();
+    properties.put("discriminator", STATISTICS_TAG);
+    StatisticsManager.createPassThroughStatistic(this, "mappings", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        return -1L;
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "maxMappings", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        return -1L;
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "allocatedMemory", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        return -1L;
+      }
+    });
+    StatisticsManager.createPassThroughStatistic(this, "occupiedMemory", tags, properties, new Callable<Number>() {
+      @Override
+      public Number call() throws Exception {
+        return -1L;
+      }
+    });
 
   }
 
