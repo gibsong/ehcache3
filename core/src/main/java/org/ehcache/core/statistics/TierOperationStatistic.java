@@ -57,11 +57,11 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
   private final OperationStatistic<S> operationStatistic;
   private final HashMap<D, Set<S>> xlatMap;
 
-  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, Object tier, HashMap<D, Set<S>> xlatMap, String name, int priority, String operationName) {
+  public TierOperationStatistic(Class<D> aliasing, Class<S> aliased, Object tier, HashMap<D, Set<S>> xlatMap, String sourceOperationName, int priority, String targetOperationName) {
     this.aliasing = aliasing;
-    this.operationStatistic = TierOperationStatistic.findOperationStat(tier, operationName);;
+    this.operationStatistic = TierOperationStatistic.findOperationStat(tier, targetOperationName);;
     this.xlatMap = xlatMap;
-    this.name = name;
+    this.name = sourceOperationName;
     this.tags = new HashSet<String>();
     this.tags.add("tier");
     this.properties = new HashMap<String, Object>();
