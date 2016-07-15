@@ -150,15 +150,6 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     }
   }
 
-  private V getQuiet(K key) throws StoreAccessException {
-    try {
-      return getInternal(key);
-    } catch (TimeoutException e) {
-      // Don't count as a MISS
-      return null;
-    }
-  }
-
   private V getInternal(K key) throws StoreAccessException, TimeoutException {
     V value = null;
     try {
@@ -490,8 +481,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     try {
       value = getInternal(key);
     } catch (TimeoutException e) {
-      //TODO
-      getAndFaultObserver.end(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.MISS);
+      getAndFaultObserver.end(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.TIMEOUT);
       return null;
     }
     if(value == null) {
