@@ -94,6 +94,8 @@ public class OffHeapDiskStore<K, V> extends AbstractOffHeapStore<K, V> implement
 
   private static final Logger LOGGER = LoggerFactory.getLogger(OffHeapDiskStore.class);
 
+  private static final String STATISTICS_TAG = "Disk";
+
   private static final String KEY_TYPE_PROPERTY_NAME = "keyType";
   private static final String VALUE_TYPE_PROPERTY_NAME = "valueType";
   private static final int DEFAULT_CONCURRENCY = 16;
@@ -117,7 +119,7 @@ public class OffHeapDiskStore<K, V> extends AbstractOffHeapStore<K, V> implement
   public OffHeapDiskStore(FileBasedPersistenceContext fileBasedPersistenceContext,
                           ExecutionService executionService, String threadPoolAlias, int writerConcurrency,
                           final Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher, long sizeInBytes) {
-    super("local-disk", "Disk", config, timeSource, eventDispatcher);
+    super(STATISTICS_TAG, config, timeSource, eventDispatcher);
     this.fileBasedPersistenceContext = fileBasedPersistenceContext;
     this.executionService = executionService;
     this.threadPoolAlias = threadPoolAlias;

@@ -71,6 +71,8 @@ import static org.ehcache.impl.internal.store.offheap.OffHeapStoreUtils.getBuffe
  */
 public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
 
+  private static final String STATISTICS_TAG = "OffHeap";
+
   private final SwitchableEvictionAdvisor<K, OffHeapValueHolder<V>> evictionAdvisor;
   private final Serializer<K> keySerializer;
   private final Serializer<V> valueSerializer;
@@ -79,7 +81,7 @@ public class OffHeapStore<K, V> extends AbstractOffHeapStore<K, V> {
   private volatile EhcacheConcurrentOffHeapClockCache<K, OffHeapValueHolder<V>> map;
 
   public OffHeapStore(final Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher, long sizeInBytes) {
-    super("local-offheap", "OffHeap", config, timeSource, eventDispatcher);
+    super(STATISTICS_TAG, config, timeSource, eventDispatcher);
     EvictionAdvisor<? super K, ? super V> evictionAdvisor = config.getEvictionAdvisor();
     if (evictionAdvisor != null) {
       this.evictionAdvisor = wrap(evictionAdvisor);

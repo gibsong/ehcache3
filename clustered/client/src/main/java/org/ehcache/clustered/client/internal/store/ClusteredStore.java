@@ -63,6 +63,7 @@ import org.terracotta.statistics.StatisticsManager;
 import org.terracotta.statistics.observer.OperationObserver;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -83,7 +84,7 @@ import static org.terracotta.statistics.StatisticBuilder.operation;
  */
 public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
 
-  private static final String STATISTICS_TAG = "clustered-store";
+  private static final String STATISTICS_TAG = "Clustered";
 
   private final OperationsCodec<K, V> codec;
   private final ChainResolver<K, V> resolver;
@@ -93,6 +94,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
   private volatile ServerStoreProxy storeProxy;
   private volatile InvalidationValve invalidationValve;
 
+  private final ClusteredStoreStatsSettings clusteredStoreStatsSettings;
   private final OperationObserver<StoreOperationOutcomes.GetOutcome> getObserver;
   private final OperationObserver<StoreOperationOutcomes.PutOutcome> putObserver;
   private final OperationObserver<StoreOperationOutcomes.RemoveOutcome> removeObserver;
@@ -104,12 +106,13 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
   private final OperationObserver<StoreOperationOutcomes.EvictionOutcome> evictionObserver;
   private final OperationObserver<AuthoritativeTierOperationOutcomes.GetAndFaultOutcome> getAndFaultObserver;
 
-  private final ClusteredStoreStatsSettings clusteredStoreStatsSettings;
 
   private ClusteredStore(final OperationsCodec<K, V> codec, final ChainResolver<K, V> resolver, TimeSource timeSource) {
     this.codec = codec;
     this.resolver = resolver;
     this.timeSource = timeSource;
+    this.clusteredStoreStatsSettings = new ClusteredStoreStatsSettings(this);
+    StatisticsManager.associate(clusteredStoreStatsSettings).withParent(this);
 
     this.getObserver = operation(StoreOperationOutcomes.GetOutcome.class).of(this).named("get").tag(STATISTICS_TAG).build();
     this.putObserver = operation(StoreOperationOutcomes.PutOutcome.class).of(this).named("put").tag(STATISTICS_TAG).build();
@@ -120,7 +123,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     this.conditionalReplaceObserver = operation(StoreOperationOutcomes.ConditionalReplaceOutcome.class).of(this).named("conditionalReplace").tag(STATISTICS_TAG).build();
     this.evictionObserver = operation(StoreOperationOutcomes.EvictionOutcome.class).of(this).named("eviction").tag(STATISTICS_TAG).build();
     this.getAndFaultObserver = operation(AuthoritativeTierOperationOutcomes.GetAndFaultOutcome.class).of(this).named("getAndFault").tag(STATISTICS_TAG).build();
-    this.clusteredStoreStatsSettings = new ClusteredStoreStatsSettings(this);
+
   }
 
   /**
@@ -733,6 +736,9 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     ClusteredStoreStatsSettings(ClusteredStore<?, ?> store) {
       this.authoritativeTier = store;
     }
+
+    //@ContextAttribute("tags") private final Set<String> tags = new HashSet<String>(Arrays.asList("store"));
+    @ContextAttribute("discriminator") private final String discriminator = STATISTICS_TAG;
   }
 
 }

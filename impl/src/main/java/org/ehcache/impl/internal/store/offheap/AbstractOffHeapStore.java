@@ -105,7 +105,7 @@ public abstract class AbstractOffHeapStore<K, V> implements AuthoritativeTier<K,
   protected BackingMapEvictionListener<K, V> mapEvictionListener;
   private volatile CachingTier.InvalidationListener<K, V> invalidationListener = NULL_INVALIDATION_LISTENER;
 
-  public AbstractOffHeapStore(String statisticsTag, String discriminator, Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher) {
+  public AbstractOffHeapStore(String statisticsTag, Configuration<K, V> config, TimeSource timeSource, StoreEventDispatcher<K, V> eventDispatcher) {
     keyType = config.getKeyType();
     valueType = config.getValueType();
     expiry = config.getExpiry();
@@ -113,7 +113,7 @@ public abstract class AbstractOffHeapStore<K, V> implements AuthoritativeTier<K,
     this.timeSource = timeSource;
     this.eventDispatcher = eventDispatcher;
 
-    this.offHeapStoreStatsSettings = new OffHeapStoreStatsSettings(this, discriminator);
+    this.offHeapStoreStatsSettings = new OffHeapStoreStatsSettings(statisticsTag);
     StatisticsManager.associate(offHeapStoreStatsSettings).withParent(this);
     this.getObserver = operation(StoreOperationOutcomes.GetOutcome.class).of(this).named("get").tag(statisticsTag).build();
     this.putObserver = operation(StoreOperationOutcomes.PutOutcome.class).of(this).named("put").tag(statisticsTag).build();
@@ -139,7 +139,7 @@ public abstract class AbstractOffHeapStore<K, V> implements AuthoritativeTier<K,
 
     Set<String> tags = new HashSet<String>(Arrays.asList(statisticsTag, "tier"));
     Map<String, Object> properties = new HashMap<String, Object>();
-    properties.put("discriminator", discriminator);
+    properties.put("discriminator", statisticsTag);
     StatisticsManager.createPassThroughStatistic(this, "allocatedMemory", tags, properties, new Callable<Number>() {
       @Override
       public Number call() throws Exception {
@@ -1317,11 +1317,9 @@ public abstract class AbstractOffHeapStore<K, V> implements AuthoritativeTier<K,
 
   private static final class OffHeapStoreStatsSettings {
     @ContextAttribute("tags") private final Set<String> tags = new HashSet<String>(Arrays.asList("store"));
-    @ContextAttribute("authoritativeTier") private final AbstractOffHeapStore<?, ?> authoritativeTier;
     @ContextAttribute("discriminator") private final String discriminator;
 
-    OffHeapStoreStatsSettings(AbstractOffHeapStore<?, ?> store, String discriminator) {
-      this.authoritativeTier = store;
+    OffHeapStoreStatsSettings(String discriminator) {
       this.discriminator = discriminator;
     }
   }

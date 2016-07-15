@@ -112,6 +112,8 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
   private static final Logger LOG = LoggerFactory.getLogger(OnHeapStore.class);
 
+  private static final String STATISTICS_TAG = "OnHeap";
+
   private static final int ATTEMPT_RATIO = 4;
   private static final int EVICTION_RATIO = 2;
 
@@ -242,30 +244,30 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
     } else {
       this.map = new KeyCopyBackend<K, V>(byteSized, keyCopier);
     }
-    onHeapStoreStatsSettings = new OnHeapStoreStatsSettings(this);
+    onHeapStoreStatsSettings = new OnHeapStoreStatsSettings();
     StatisticsManager.associate(onHeapStoreStatsSettings).withParent(this);
-    getObserver = operation(StoreOperationOutcomes.GetOutcome.class).named("get").of(this).tag("onheap-store").build();
-    putObserver = operation(StoreOperationOutcomes.PutOutcome.class).named("put").of(this).tag("onheap-store").build();
-    removeObserver = operation(StoreOperationOutcomes.RemoveOutcome.class).named("remove").of(this).tag("onheap-store").build();
-    putIfAbsentObserver = operation(StoreOperationOutcomes.PutIfAbsentOutcome.class).named("putIfAbsent").of(this).tag("onheap-store").build();
-    conditionalRemoveObserver = operation(StoreOperationOutcomes.ConditionalRemoveOutcome.class).named("conditionalRemove").of(this).tag("onheap-store").build();
-    replaceObserver = operation(StoreOperationOutcomes.ReplaceOutcome.class).named("replace").of(this).tag("onheap-store").build();
-    conditionalReplaceObserver = operation(StoreOperationOutcomes.ConditionalReplaceOutcome.class).named("conditionalReplace").of(this).tag("onheap-store").build();
-    computeObserver = operation(StoreOperationOutcomes.ComputeOutcome.class).named("compute").of(this).tag("onheap-store").build();
-    computeIfAbsentObserver = operation(StoreOperationOutcomes.ComputeIfAbsentOutcome.class).named("computeIfAbsent").of(this).tag("onheap-store").build();
-    evictionObserver = operation(StoreOperationOutcomes.EvictionOutcome.class).named("eviction").of(this).tag("onheap-store").build();
-    expirationObserver = operation(StoreOperationOutcomes.ExpirationOutcome.class).named("expiration").of(this).tag("onheap-store").build();
-    getOrComputeIfAbsentObserver = operation(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class).named("getOrComputeIfAbsent").of(this).tag("onheap-store").build();
-    invalidateObserver = operation(CachingTierOperationOutcomes.InvalidateOutcome.class).named("invalidate").of(this).tag("onheap-store").build();
-    invalidateAllObserver = operation(CachingTierOperationOutcomes.InvalidateAllOutcome.class).named("invalidateAll").of(this).tag("onheap-store").build();
-    invalidateAllWithHashObserver = operation(CachingTierOperationOutcomes.InvalidateAllWithHashOutcome.class).named("invalidateAllWithHash").of(this).tag("onheap-store").build();
-    silentInvalidateObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateOutcome.class).named("silentInvalidate").of(this).tag("onheap-store").build();
-    silentInvalidateAllObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllOutcome.class).named("silentInvalidateAll").of(this).tag("onheap-store").build();
-    silentInvalidateAllWithHashObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllWithHashOutcome.class).named("silentInvalidateAllWithHash").of(this).tag("onheap-store").build();
+    getObserver = operation(StoreOperationOutcomes.GetOutcome.class).named("get").of(this).tag(STATISTICS_TAG).build();
+    putObserver = operation(StoreOperationOutcomes.PutOutcome.class).named("put").of(this).tag(STATISTICS_TAG).build();
+    removeObserver = operation(StoreOperationOutcomes.RemoveOutcome.class).named("remove").of(this).tag(STATISTICS_TAG).build();
+    putIfAbsentObserver = operation(StoreOperationOutcomes.PutIfAbsentOutcome.class).named("putIfAbsent").of(this).tag(STATISTICS_TAG).build();
+    conditionalRemoveObserver = operation(StoreOperationOutcomes.ConditionalRemoveOutcome.class).named("conditionalRemove").of(this).tag(STATISTICS_TAG).build();
+    replaceObserver = operation(StoreOperationOutcomes.ReplaceOutcome.class).named("replace").of(this).tag(STATISTICS_TAG).build();
+    conditionalReplaceObserver = operation(StoreOperationOutcomes.ConditionalReplaceOutcome.class).named("conditionalReplace").of(this).tag(STATISTICS_TAG).build();
+    computeObserver = operation(StoreOperationOutcomes.ComputeOutcome.class).named("compute").of(this).tag(STATISTICS_TAG).build();
+    computeIfAbsentObserver = operation(StoreOperationOutcomes.ComputeIfAbsentOutcome.class).named("computeIfAbsent").of(this).tag(STATISTICS_TAG).build();
+    evictionObserver = operation(StoreOperationOutcomes.EvictionOutcome.class).named("eviction").of(this).tag(STATISTICS_TAG).build();
+    expirationObserver = operation(StoreOperationOutcomes.ExpirationOutcome.class).named("expiration").of(this).tag(STATISTICS_TAG).build();
+    getOrComputeIfAbsentObserver = operation(CachingTierOperationOutcomes.GetOrComputeIfAbsentOutcome.class).named("getOrComputeIfAbsent").of(this).tag(STATISTICS_TAG).build();
+    invalidateObserver = operation(CachingTierOperationOutcomes.InvalidateOutcome.class).named("invalidate").of(this).tag(STATISTICS_TAG).build();
+    invalidateAllObserver = operation(CachingTierOperationOutcomes.InvalidateAllOutcome.class).named("invalidateAll").of(this).tag(STATISTICS_TAG).build();
+    invalidateAllWithHashObserver = operation(CachingTierOperationOutcomes.InvalidateAllWithHashOutcome.class).named("invalidateAllWithHash").of(this).tag(STATISTICS_TAG).build();
+    silentInvalidateObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateOutcome.class).named("silentInvalidate").of(this).tag(STATISTICS_TAG).build();
+    silentInvalidateAllObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllOutcome.class).named("silentInvalidateAll").of(this).tag(STATISTICS_TAG).build();
+    silentInvalidateAllWithHashObserver = operation(HigherCachingTierOperationOutcomes.SilentInvalidateAllWithHashOutcome.class).named("silentInvalidateAllWithHash").of(this).tag(STATISTICS_TAG).build();
 
-    Set<String> tags = new HashSet<String>(Arrays.asList("onheap-store", "tier"));
+    Set<String> tags = new HashSet<String>(Arrays.asList(STATISTICS_TAG, "tier"));
     Map<String, Object> properties = new HashMap<String, Object>();
-    properties.put("discriminator", "OnHeap");
+    properties.put("discriminator", STATISTICS_TAG);
     StatisticsManager.createPassThroughStatistic(this, "mappings", tags, properties, new Callable<Number>() {
       @Override
       public Number call() throws Exception {
@@ -1807,14 +1809,7 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
 
   private static final class OnHeapStoreStatsSettings {
     @ContextAttribute("tags") private final Set<String> tags = new HashSet<String>(Arrays.asList("store"));
-    @ContextAttribute("cachingTier") private final CachingTier<?, ?> cachingTier;
-    @ContextAttribute("authoritativeTier") private final OnHeapStore<?, ?> authoritativeTier;
-    @ContextAttribute("discriminator") private final String discriminator = "OnHeap";
-
-    OnHeapStoreStatsSettings(OnHeapStore<?, ?> onHeapStore) {
-      this.cachingTier = null;
-      this.authoritativeTier = onHeapStore;
-    }
+    @ContextAttribute("discriminator") private final String discriminator = STATISTICS_TAG;
   }
 
 }

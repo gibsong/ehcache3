@@ -66,9 +66,6 @@ public class TieredStore<K, V> implements Store<K, V> {
   private final CachingTier<K, V> realCachingTier;
   private final AuthoritativeTier<K, V> authoritativeTier;
 
-  private final TieringStoreStatsSettings tieringStoreStatsSettings;
-
-
   public TieredStore(CachingTier<K, V> cachingTier, AuthoritativeTier<K, V> authoritativeTier) {
     this.cachingTierRef = new AtomicReference<CachingTier<K, V>>(cachingTier);
     this.authoritativeTier = authoritativeTier;
@@ -97,9 +94,6 @@ public class TieredStore<K, V> implements Store<K, V> {
 
     StatisticsManager.associate(cachingTier).withParent(this);
     StatisticsManager.associate(authoritativeTier).withParent(this);
-
-    tieringStoreStatsSettings = new TieringStoreStatsSettings(cachingTier, authoritativeTier);
-    StatisticsManager.associate(tieringStoreStatsSettings).withParent(this);
   }
 
 
@@ -513,17 +507,6 @@ public class TieredStore<K, V> implements Store<K, V> {
     public void stop() {
       this.serviceProvider = null;
       providersMap.clear();
-    }
-  }
-
-  private static final class TieringStoreStatsSettings {
-    @ContextAttribute("tags") private final Set<String> tags = new HashSet<String>(Arrays.asList("store"));
-    @ContextAttribute("cachingTier") private final CachingTier<?, ?> cachingTier;
-    @ContextAttribute("authoritativeTier") private final AuthoritativeTier<?, ?> authoritativeTier;
-
-    TieringStoreStatsSettings(CachingTier<?, ?> cachingTier, AuthoritativeTier<?, ?> authoritativeTier) {
-      this.cachingTier = cachingTier;
-      this.authoritativeTier = authoritativeTier;
     }
   }
 
