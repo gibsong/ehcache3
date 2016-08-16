@@ -38,16 +38,17 @@ import org.terracotta.management.model.context.Context;
 import org.terracotta.management.model.context.ContextContainer;
 import org.terracotta.management.model.stats.ContextualStatistics;
 import org.terracotta.management.model.stats.history.CounterHistory;
-import org.terracotta.management.model.stats.primitive.Counter;
 import org.terracotta.management.registry.ResultSet;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
+import org.ehcache.management.config.EhcacheStatisticsProviderConfiguration;
 
 public class ManagementTest {
 
-  @Test
+  @Test (timeout=10000)
   public void usingManagementRegistry() throws Exception {
     // tag::usingManagementRegistry[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class,
@@ -89,15 +90,30 @@ public class ManagementTest {
     CounterHistory offHeapStore_Mapping_Count = counters.getStatistic(CounterHistory.class, "OffHeap:MappingCount");
     CounterHistory offHeapStore_OccupiedBytes_Count = counters.getStatistic(CounterHistory.class, "OffHeap:OccupiedBytesCount");
 
+    while(!isHistoryReady(onHeapStore_Hit_Count, 0)) {}
+    while(!isHistoryReady(offHeapStore_Hit_Count, 0)) {}
     Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
+
+    while(!isHistoryReady(cache_Hit_Count, 0)) {}
     Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
 
-    System.out.println("onheap evictions: " + onHeapStore_Eviction_Count.getValue()[0].getValue());
-    System.out.println("offheap mappings: " + offHeapStore_Mapping_Count.getValue()[0].getValue());
-    System.out.println("offheap used bytes: " + offHeapStore_OccupiedBytes_Count.getValue()[0].getValue());
+    while(!isHistoryReady(onHeapStore_Eviction_Count, 0)) {}
+    while(!isHistoryReady(offHeapStore_Mapping_Count, 0)) {}
+    while(!isHistoryReady(offHeapStore_OccupiedBytes_Count, 0)) {}
 
     cacheManager.close();
     // end::usingManagementRegistry[]
+  }
+
+  private static boolean isHistoryReady(CounterHistory counterHistory, long defaultValue)
+  {
+    if(counterHistory.getValue().length > 0) {
+      int mostRecentIndex = counterHistory.getValue().length - 1;
+      if(counterHistory.getValue()[mostRecentIndex].getValue() > defaultValue) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test
@@ -173,22 +189,25 @@ public class ManagementTest {
     // end::actionCall[]
   }
 
-  @Test
+  //TODO update managingMultipleCacheManagers() documentation/asciidoc
+  @Test (timeout = 10000)
   public void managingMultipleCacheManagers() throws Exception {
     // tag::managingMultipleCacheManagers[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, ResourcePoolsBuilder.heap(10))
         .build();
 
+    EhcacheStatisticsProviderConfiguration config = new EhcacheStatisticsProviderConfiguration(1,TimeUnit.MINUTES,100,1,TimeUnit.MILLISECONDS,10,TimeUnit.MINUTES);
+
     SharedManagementService sharedManagementService = new DefaultSharedManagementService(); // <1>
     CacheManager cacheManager1 = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("aCache", cacheConfiguration)
-        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-1"))
+        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-1").addConfiguration(config))
         .using(sharedManagementService) // <2>
         .build(true);
 
     CacheManager cacheManager2 = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("aCache", cacheConfiguration)
-        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-2"))
+        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-2").addConfiguration(config))
         .using(sharedManagementService) // <3>
         .build(true);
 
@@ -200,15 +219,24 @@ public class ManagementTest {
       .with("cacheManagerName", "myCacheManager-2")
       .with("cacheName", "aCache");
 
+    Cache<Long, String> cache = cacheManager1.getCache("aCache", Long.class, String.class);
+    cache.get(1L);//cache miss
+    cache.get(2L);//cache miss
+
     ResultSet<ContextualStatistics> counters = sharedManagementService.withCapability("StatisticsCapability")
-        .queryStatistic("GetCounter")
+        .queryStatistic("Cache:MissCount")
         .on(context1)
         .on(context2)
         .build()
         .execute();
 
-    ContextualStatistics statistics = counters.getResult(context1);
-    Counter counter = statistics.getStatistic(Counter.class, "GetCounter");
+    ContextualStatistics statisticsContext1 = counters.getResult(context1);
+
+    CounterHistory counterContext1 = statisticsContext1.getStatistic(CounterHistory.class, "Cache:MissCount");;
+
+    while(!isHistoryReady(counterContext1, 0)) {}
+    int mostRecentSampleIndex = counterContext1.getValue().length - 1;
+    Assert.assertEquals(2L, counterContext1.getValue()[mostRecentSampleIndex].getValue().longValue());
 
     cacheManager2.close();
     cacheManager1.close();

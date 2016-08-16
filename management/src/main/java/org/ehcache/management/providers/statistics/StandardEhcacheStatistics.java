@@ -48,9 +48,12 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.terracotta.management.model.capabilities.descriptors.StatisticDescriptor;
+import org.terracotta.management.model.stats.StatisticType;
 
 class StandardEhcacheStatistics extends ExposedCacheBinding {
 
@@ -148,21 +151,33 @@ class StandardEhcacheStatistics extends ExposedCacheBinding {
   @Override
   public Collection<Descriptor> getDescriptors() {
     Set<Descriptor> capabilities = new HashSet<Descriptor>();
-
     capabilities.addAll(queryStatisticsRegistry());
-    capabilities.addAll(operationStatistics());
-
-    return capabilities;
-  }
-
-  private Set<Descriptor> operationStatistics() {
-    Set<Descriptor> capabilities = new HashSet<Descriptor>();
-
     return capabilities;
   }
 
   private Set<Descriptor> queryStatisticsRegistry() {
     Set<Descriptor> capabilities = new HashSet<Descriptor>();
+
+    Map<String, RegisteredStatistic> registrations = statisticsRegistry.getRegistrations();
+
+    for(Entry entry : registrations.entrySet()) {
+      RegisteredStatistic registeredStatistic = registrations.get(entry.getKey().toString());
+
+      if(registeredStatistic instanceof RegisteredCompoundStatistic) {
+        List<StatisticDescriptor> statistics = new ArrayList<StatisticDescriptor>();
+        statistics.add(new StatisticDescriptor(entry.getKey() + "Count", StatisticType.COUNTER_HISTORY));
+        statistics.add(new StatisticDescriptor(entry.getKey() + "Rate", StatisticType.RATE_HISTORY));
+        statistics.add(new StatisticDescriptor(entry.getKey() + "LatencyMinimum", StatisticType.DURATION_HISTORY));
+        statistics.add(new StatisticDescriptor(entry.getKey() + "LatencyMaximum", StatisticType.DURATION_HISTORY));
+        statistics.add(new StatisticDescriptor(entry.getKey() + "LatencyAverage", StatisticType.AVERAGE_HISTORY));
+
+        capabilities.addAll(statistics);
+      } else if(registeredStatistic instanceof RegisteredRatioStatistic) {
+        capabilities.add(new StatisticDescriptor(entry.getKey() + "Ratio", StatisticType.RATIO_HISTORY));
+      } else if(registeredStatistic instanceof RegisteredValueStatistic) {
+        capabilities.add(new StatisticDescriptor(entry.getKey().toString(), StatisticType.COUNTER_HISTORY));
+      }
+    }
 
     return capabilities;
   }

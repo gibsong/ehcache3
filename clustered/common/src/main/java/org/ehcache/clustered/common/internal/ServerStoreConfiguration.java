@@ -131,7 +131,7 @@ public class ServerStoreConfiguration implements Serializable {
     isCompatible &= compareField(sb, "actualValueType", actualValueType, otherConfiguration.getActualValueType());
     isCompatible &= compareField(sb, "keySerializerType", keySerializerType, otherConfiguration.getKeySerializerType());
     isCompatible &= compareField(sb, "valueSerializerType", valueSerializerType, otherConfiguration.getValueSerializerType());
-    isCompatible &= compareField(sb, "consistency", consistency, otherConfiguration.getConsistency());
+    isCompatible &= compareField(sb, "consistencyType", consistency, otherConfiguration.getConsistency());
     isCompatible &= compareField(sb, "concurrency", concurrency, otherConfiguration.getConcurrency());
 
     return isCompatible;

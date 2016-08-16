@@ -246,7 +246,8 @@ public class ServerStoreCompatibilityTest {
                                                                                 ACTUAL_VALUE_TYPE,
                                                                                 KEY_SERIALIZER_TYPE,
                                                                                 VALUE_SERIALIZER_TYPE,
-                                                                                Consistency.EVENTUAL,                                                                                 1);
+                                                                                Consistency.EVENTUAL,
+                                                                                1);
 
     ServerStoreConfiguration clientConfiguration = new ServerStoreConfiguration(DEDICATED_POOL_ALLOCATION,
                                                                                 STORED_KEY_TYPE,
@@ -255,7 +256,8 @@ public class ServerStoreCompatibilityTest {
                                                                                 ACTUAL_VALUE_TYPE,
                                                                                 KEY_SERIALIZER_TYPE,
                                                                                 VALUE_SERIALIZER_TYPE,
-                                                                                Consistency.STRONG, 1);
+                                                                                Consistency.STRONG,
+                                                                                1);
 
     ServerStoreCompatibility serverStoreCompatibility = new ServerStoreCompatibility();
 

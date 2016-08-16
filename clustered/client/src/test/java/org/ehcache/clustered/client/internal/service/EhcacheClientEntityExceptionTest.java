@@ -102,7 +102,7 @@ public class EhcacheClientEntityExceptionTest {
      */
     try {
       accessService.getServerStoreProxy(
-          getClusteredCacheIdentifier(accessService, "cacheAlias"), storeConfiguration, Consistency.EVENTUAL);
+          getClusteredCacheIdentifier(accessService, "cacheAlias"), storeConfiguration, Consistency.EVENTUAL, 1);
       fail("Expecting CachePersistenceException");
     } catch (CachePersistenceException e) {
 

@@ -15,20 +15,50 @@
  */
 package org.ehcache;
 
+import java.io.File;
+import java.io.IOException;
 import org.ehcache.clustered.client.config.builders.ClusteredResourcePoolBuilder;
 import org.ehcache.clustered.client.config.builders.ClusteringServiceConfigurationBuilder;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
-import org.ehcache.config.units.MemoryUnit;
 import org.junit.Test;
 
-import java.net.URI;
+import java.util.Collections;
+import org.ehcache.config.units.MemoryUnit;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.terracotta.connection.Connection;
+import org.terracotta.testing.rules.BasicExternalCluster;
+import org.terracotta.testing.rules.Cluster;
 
 /**
  * @author Ludovic Orban
  */
 public class Clust {
+
+  private static final String RESOURCE_CONFIG =
+      "<service xmlns:ohr='http://www.terracotta.org/config/offheap-resource' id=\"resources\">"
+          + "<ohr:offheap-resources>"
+          + "<ohr:resource name=\"primary-server-resource\" unit=\"MB\">64</ohr:resource>"
+          + "</ohr:offheap-resources>" +
+          "</service>\n";
+
+  @ClassRule
+  public static Cluster CLUSTER = new BasicExternalCluster(new File("build/cluster"), 1, Collections.<File>emptyList(), "", RESOURCE_CONFIG, "");
+  private static Connection CONNECTION;
+
+  @BeforeClass
+  public static void waitForActive() throws Exception {
+    CLUSTER.getClusterControl().waitForActive();
+    CONNECTION = CLUSTER.newConnection();
+  }
+
+  @AfterClass
+  public static void closeConnection() throws IOException {
+    CONNECTION.close();
+  }
 
   @Test
   public void works() throws Exception {
@@ -40,7 +70,7 @@ public class Clust {
             )
 //            .add(new ClusteredStoreConfiguration(Consistency.STRONG, 1024))
         )
-        .with(ClusteringServiceConfigurationBuilder.cluster(URI.create("terracotta://localhost:9510/my-application"))
+        .with(ClusteringServiceConfigurationBuilder.cluster(CLUSTER.getConnectionURI().resolve("/cache-manager-works"))
             .autoCreate()
 //            .defaultServerResource("primary-server-resource")
 //            .resourcePool("resource-pool-a", 28, MemoryUnit.MB)
