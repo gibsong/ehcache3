@@ -51,7 +51,6 @@ import org.ehcache.core.statistics.CacheOperationOutcomes.PutOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveAllOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.RemoveOutcome;
 import org.ehcache.core.statistics.CacheOperationOutcomes.ReplaceOutcome;
-import org.ehcache.core.statistics.StoreOperationOutcomes;
 import org.ehcache.expiry.Expiry;
 import org.ehcache.spi.loaderwriter.BulkCacheLoadingException;
 import org.ehcache.spi.loaderwriter.BulkCacheWritingException;
@@ -71,6 +70,7 @@ import org.terracotta.statistics.observer.OperationObserver;
 
 import static org.ehcache.core.exceptions.ExceptionFactory.newCacheLoadingException;
 import static org.ehcache.core.internal.util.ValueSuppliers.supplierOf;
+import org.ehcache.core.statistics.CacheOperationOutcomes.ClearOutcome;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -102,6 +102,7 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
   private final OperationObserver<PutIfAbsentOutcome> putIfAbsentObserver = operation(PutIfAbsentOutcome.class).named("putIfAbsent").of(this).tag("cache").build();
   private final OperationObserver<ReplaceOutcome> replaceObserver = operation(ReplaceOutcome.class).named("replace").of(this).tag("cache").build();
   private final Map<BulkOps, LongAdder> bulkMethodEntries = new EnumMap<BulkOps, LongAdder>(BulkOps.class);
+  private final OperationObserver<ClearOutcome> clearObserver = operation(ClearOutcome.class).named("clear").of(this).tag("cache").build();
 
   /**
    * Creates a new {@code Ehcache} based on the provided parameters.
@@ -294,10 +295,17 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
    */
   @Override
   public void clear() {
+    this.clearObserver.begin();
     statusTransitioner.checkAvailable();
     try {
       store.clear();
+      //if(store.iterator().hasNext()) {  //TODO the clusteredStore Iterator does not exist!
+        //this.clearObserver.end(ClearOutcome.FAILURE);
+      //} else {
+        this.clearObserver.end(ClearOutcome.SUCCESS);
+      //}
     } catch (StoreAccessException e) {
+      this.clearObserver.end(ClearOutcome.FAILURE);
       resilienceStrategy.clearFailure(e);
     }
   }

@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.management.config.EhcacheStatisticsProviderConfiguration;
+import org.ehcache.management.providers.statistics.StatsUtil;
 
 public class ManagementTest {
 
@@ -73,7 +74,7 @@ public class ManagementTest {
 
     Thread.sleep(1100);
 
-    Context context = createContext(managementRegistry); // <5>
+    Context context = StatsUtil.createContext(managementRegistry); // <5>
 
     ContextualStatistics counters = managementRegistry.withCapability("StatisticsCapability") // <6>
         .queryStatistics(Arrays.asList("OnHeap:HitCount", "OnHeap:EvictionCount", "OffHeap:HitCount", "Cache:HitCount", "OffHeap:OccupiedBytesCount", "OffHeap:MappingCount"))
@@ -90,30 +91,19 @@ public class ManagementTest {
     CounterHistory offHeapStore_Mapping_Count = counters.getStatistic(CounterHistory.class, "OffHeap:MappingCount");
     CounterHistory offHeapStore_OccupiedBytes_Count = counters.getStatistic(CounterHistory.class, "OffHeap:OccupiedBytesCount");
 
-    while(!isHistoryReady(onHeapStore_Hit_Count, 0)) {}
-    while(!isHistoryReady(offHeapStore_Hit_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(onHeapStore_Hit_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_Hit_Count, 0)) {}
     Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
 
-    while(!isHistoryReady(cache_Hit_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(cache_Hit_Count, 0)) {}
     Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
 
-    while(!isHistoryReady(onHeapStore_Eviction_Count, 0)) {}
-    while(!isHistoryReady(offHeapStore_Mapping_Count, 0)) {}
-    while(!isHistoryReady(offHeapStore_OccupiedBytes_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(onHeapStore_Eviction_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_Mapping_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_OccupiedBytes_Count, 0)) {}
 
     cacheManager.close();
     // end::usingManagementRegistry[]
-  }
-
-  private static boolean isHistoryReady(CounterHistory counterHistory, long defaultValue)
-  {
-    if(counterHistory.getValue().length > 0) {
-      int mostRecentIndex = counterHistory.getValue().length - 1;
-      if(counterHistory.getValue()[mostRecentIndex].getValue() > defaultValue) {
-        return true;
-      }
-    }
-    return false;
   }
 
   @Test
@@ -175,7 +165,7 @@ public class ManagementTest {
     Cache<Long, String> aCache = cacheManager.getCache("aCache", Long.class, String.class);
     aCache.put(0L, "zero"); // <1>
 
-    Context context = createContext(managementRegistry); // <2>
+    Context context = StatsUtil.createContext(managementRegistry); // <2>
 
     managementRegistry.withCapability("ActionsCapability") // <3>
         .call("clear")
@@ -234,21 +224,13 @@ public class ManagementTest {
 
     CounterHistory counterContext1 = statisticsContext1.getStatistic(CounterHistory.class, "Cache:MissCount");;
 
-    while(!isHistoryReady(counterContext1, 0)) {}
+    while(!StatsUtil.isHistoryReady(counterContext1, 0)) {}
     int mostRecentSampleIndex = counterContext1.getValue().length - 1;
     Assert.assertEquals(2L, counterContext1.getValue()[mostRecentSampleIndex].getValue().longValue());
 
     cacheManager2.close();
     cacheManager1.close();
     // end::managingMultipleCacheManagers[]
-  }
-
-  private static Context createContext(ManagementRegistryService managementRegistry) {
-    ContextContainer cacheManagerCtx = managementRegistry.getContextContainer();
-    ContextContainer firstCacheCtx = cacheManagerCtx.getSubContexts().iterator().next();
-    return Context.empty()
-        .with(cacheManagerCtx.getName(), cacheManagerCtx.getValue())
-        .with(firstCacheCtx.getName(), firstCacheCtx.getValue());
   }
 
 }

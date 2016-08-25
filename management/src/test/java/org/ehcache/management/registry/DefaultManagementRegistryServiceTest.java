@@ -16,7 +16,6 @@
 package org.ehcache.management.registry;
 
 import java.io.File;
-import java.io.IOException;
 import org.ehcache.CacheManager;
 import org.ehcache.config.CacheConfiguration;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -60,6 +59,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.terracotta.management.model.capabilities.descriptors.Descriptor;
 import org.terracotta.management.registry.StatisticQuery.Builder;
 
 public class DefaultManagementRegistryServiceTest {
@@ -108,7 +108,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(30));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(37));
 
     cacheManager1.close();
   }
@@ -133,7 +133,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(50));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(57));
 
     cacheManager1.close();
   }
@@ -160,7 +160,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(50));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(57));
 
     persistentCacheManager.close();
   }
@@ -169,11 +169,6 @@ public class DefaultManagementRegistryServiceTest {
     return getClass().getClassLoader().getResource(".").toURI().getPath();
   }
 
-  @Test
-  public void descriptorClusteredStoreTest() throws IOException
-  {
-    //TODO
-  }
 
   @Test
   public void testCanGetCapabilities() {
@@ -194,7 +189,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(30));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(37));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getCapabilityContext().getAttributes(), hasSize(2));
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getCapabilityContext().getAttributes(), hasSize(2));
