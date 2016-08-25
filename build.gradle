@@ -58,7 +58,6 @@ subprojects {
   targetCompatibility = 1.6
 
   repositories {
-    mavenLocal()
     mavenCentral()
     maven { url "http://repo.terracotta.org/maven2" }
   }
@@ -88,7 +87,7 @@ subprojects {
   }
 
   test {
-    maxHeapSize = "1024m"
+    maxHeapSize = "512m"
     systemProperty 'java.awt.headless', 'true'
     if (parent.isCloudbees) {
       systemProperty 'disable.concurrent.tests', 'true'
