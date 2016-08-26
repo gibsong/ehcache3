@@ -177,7 +177,7 @@ public class TierOperationStatistic<S extends Enum<S>, D extends Enum<D>> implem
   private static String findDiscriminator(Object rootNode) {
     Set<TreeNode> results = queryBuilder().chain(self())
         .children().filter(
-            context(attributes(Matchers.allOf(
+            context(attributes(Matchers.<Map<String, Object>>allOf(
                 hasAttribute("discriminator", new Matcher<Object>() {
                   @Override
                   protected boolean matchesSafely(Object object) {
