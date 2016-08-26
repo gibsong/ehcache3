@@ -181,7 +181,7 @@ public class StandardEhcacheStatisticsTest {
     Assert.assertThat(clearCounter.size(), Matchers.is(1));
     CounterHistory cache_Clear_Count = clearCounter.getStatistic(CounterHistory.class, "Cache:ClearCount");
 
-    while(!StatsUtil.isHistoryReady(cache_Clear_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(cache_Clear_Count, 0L)) {}
     Assert.assertThat(cache_Clear_Count.getValue()[0].getValue(), Matchers.equalTo(2L));
 
     cacheManager.close();

@@ -91,16 +91,16 @@ public class ManagementTest {
     CounterHistory offHeapStore_Mapping_Count = counters.getStatistic(CounterHistory.class, "OffHeap:MappingCount");
     CounterHistory offHeapStore_OccupiedBytes_Count = counters.getStatistic(CounterHistory.class, "OffHeap:OccupiedBytesCount");
 
-    while(!StatsUtil.isHistoryReady(onHeapStore_Hit_Count, 0)) {}
-    while(!StatsUtil.isHistoryReady(offHeapStore_Hit_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(onHeapStore_Hit_Count, 0L)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_Hit_Count, 0L)) {}
     Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
 
-    while(!StatsUtil.isHistoryReady(cache_Hit_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(cache_Hit_Count, 0L)) {}
     Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
 
-    while(!StatsUtil.isHistoryReady(onHeapStore_Eviction_Count, 0)) {}
-    while(!StatsUtil.isHistoryReady(offHeapStore_Mapping_Count, 0)) {}
-    while(!StatsUtil.isHistoryReady(offHeapStore_OccupiedBytes_Count, 0)) {}
+    while(!StatsUtil.isHistoryReady(onHeapStore_Eviction_Count, 0L)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_Mapping_Count, 0L)) {}
+    while(!StatsUtil.isHistoryReady(offHeapStore_OccupiedBytes_Count, 0L)) {}
 
     cacheManager.close();
     // end::usingManagementRegistry[]
@@ -180,7 +180,7 @@ public class ManagementTest {
   }
 
   //TODO update managingMultipleCacheManagers() documentation/asciidoc
-  @Test (timeout = 10000)
+  @Test //(timeout = 10000)
   public void managingMultipleCacheManagers() throws Exception {
     // tag::managingMultipleCacheManagers[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, ResourcePoolsBuilder.heap(10))
@@ -224,7 +224,7 @@ public class ManagementTest {
 
     CounterHistory counterContext1 = statisticsContext1.getStatistic(CounterHistory.class, "Cache:MissCount");;
 
-    while(!StatsUtil.isHistoryReady(counterContext1, 0)) {}
+    while(!StatsUtil.isHistoryReady(counterContext1, 0L)) {}
     int mostRecentSampleIndex = counterContext1.getValue().length - 1;
     Assert.assertEquals(2L, counterContext1.getValue()[mostRecentSampleIndex].getValue().longValue());
 

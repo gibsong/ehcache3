@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.ehcache.Cache;
 import org.ehcache.PersistentCacheManager;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 
@@ -199,7 +200,7 @@ public class DefaultManagementRegistryServiceTest {
 
   @Test (timeout = 5000)
   public void testCanGetStats() {
-    String queryStatisticName = "Cache:MissCount";
+    String queryStatisticName = "Cache:HitCount";
 
     long averageWindowDuration = 1;
     TimeUnit averageWindowUnit = TimeUnit.MINUTES;
@@ -229,11 +230,16 @@ public class DefaultManagementRegistryServiceTest {
       .with("cacheManagerName", "myCM")
       .with("cacheName", "aCache2");
 
-    cacheManager1.getCache("aCache1", Long.class, String.class).get(1L);
-    cacheManager1.getCache("aCache1", Long.class, String.class).get(2L);
-    cacheManager1.getCache("aCache2", Long.class, String.class).get(3L);
-    cacheManager1.getCache("aCache2", Long.class, String.class).get(4L);
-    cacheManager1.getCache("aCache2", Long.class, String.class).get(5L);
+    Cache cache1 = cacheManager1.getCache("aCache1", Long.class, String.class);
+    Cache cache2 = cacheManager1.getCache("aCache2", Long.class, String.class);
+
+    cache1.put(1L, "one");
+    cache2.put(3L, "three");
+
+    cache1.get(1L);
+    cache1.get(2L);
+    cache2.get(3L);
+    cache2.get(4L);
 
     Builder builder1 = managementRegistry.withCapability("StatisticsCapability")
         .queryStatistic(queryStatisticName)
@@ -244,7 +250,7 @@ public class DefaultManagementRegistryServiceTest {
 
     assertThat(counters.size(), equalTo(1));
     int mostRecentSampleIndex = counterHistory1.getValue().length - 1;
-    assertThat(counterHistory1.getValue()[mostRecentSampleIndex].getValue(), equalTo(2L));
+    assertThat(counterHistory1.getValue()[mostRecentSampleIndex].getValue(), equalTo(1L));
 
     Builder builder2 = managementRegistry.withCapability("StatisticsCapability")
         .queryStatistic(queryStatisticName)
@@ -257,10 +263,10 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(allCounters.getResult(context2).size(), equalTo(1));
 
     mostRecentSampleIndex = allCounters.getResult(context1).getStatistic(CounterHistory.class, queryStatisticName).getValue().length - 1;
-    assertThat(allCounters.getResult(context1).getStatistic(CounterHistory.class, queryStatisticName).getValue()[mostRecentSampleIndex].getValue(), equalTo(2L));
+    assertThat(allCounters.getResult(context1).getStatistic(CounterHistory.class, queryStatisticName).getValue()[mostRecentSampleIndex].getValue(), equalTo(1L));
 
     mostRecentSampleIndex = allCounters.getResult(context2).getStatistic(CounterHistory.class, queryStatisticName).getValue().length - 1;
-    assertThat(allCounters.getResult(context2).getStatistic(CounterHistory.class, queryStatisticName).getValue()[mostRecentSampleIndex].getValue(), equalTo(3L));
+    assertThat(allCounters.getResult(context2).getStatistic(CounterHistory.class, queryStatisticName).getValue()[mostRecentSampleIndex].getValue(), equalTo(1L));
 
     cacheManager1.close();
   }

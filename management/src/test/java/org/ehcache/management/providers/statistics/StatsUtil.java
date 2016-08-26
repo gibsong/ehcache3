@@ -52,12 +52,11 @@ public class StatsUtil {
     return false;
   }
 
-  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, long defaultValue)
+  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, Long defaultValue)
   {
     if(counterHistory.getValue().length > 0) {
       int mostRecentIndex = counterHistory.getValue().length - 1;
-      System.out.println("isHistoryReady: " + counterHistory.getValue()[mostRecentIndex].getValue());
-      if((long)counterHistory.getValue()[mostRecentIndex].getValue() > defaultValue) {
+      if((Long)counterHistory.getValue()[mostRecentIndex].getValue() > defaultValue) {
         return true;
       }
     }
