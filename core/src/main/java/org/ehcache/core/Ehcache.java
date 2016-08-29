@@ -71,6 +71,7 @@ import org.terracotta.statistics.observer.OperationObserver;
 import static org.ehcache.core.exceptions.ExceptionFactory.newCacheLoadingException;
 import static org.ehcache.core.internal.util.ValueSuppliers.supplierOf;
 import org.ehcache.core.statistics.CacheOperationOutcomes.ClearOutcome;
+import org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome;
 import static org.terracotta.statistics.StatisticBuilder.operation;
 
 /**
@@ -92,7 +93,7 @@ public class Ehcache<K, V> implements InternalCache<K, V> {
   private final Jsr107CacheImpl jsr107Cache;
   protected final Logger logger;
 
-  private final OperationObserver<org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome> getObserver = operation(org.ehcache.core.statistics.CacheOperationOutcomes.GetOutcome.class).named("get").of(this).tag("cache").build();
+  private final OperationObserver<GetOutcome> getObserver = operation(GetOutcome.class).named("get").of(this).tag("cache").build();
   private final OperationObserver<GetAllOutcome> getAllObserver = operation(GetAllOutcome.class).named("getAll").of(this).tag("cache").build();
   private final OperationObserver<PutOutcome> putObserver = operation(PutOutcome.class).named("put").of(this).tag("cache").build();
   private final OperationObserver<PutAllOutcome> putAllObserver = operation(PutAllOutcome.class).named("putAll").of(this).tag("cache").build();
