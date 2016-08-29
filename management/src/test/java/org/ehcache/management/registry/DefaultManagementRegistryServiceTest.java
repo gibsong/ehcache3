@@ -356,10 +356,11 @@ public class DefaultManagementRegistryServiceTest {
     } while (getCount.getValue().length < 1);
 
     // within 1 second of history there has been 3 gets
-    assertThat(getCount.getValue()[0].getValue(), equalTo(3L));
+    int mostRecentIndex = getCount.getValue().length - 1;
+    assertThat(getCount.getValue()[mostRecentIndex].getValue(), equalTo(3L));
 
     // keep time for next call (since)
-    timestamp = getCount.getValue()[0].getTimestamp();
+    timestamp = getCount.getValue()[mostRecentIndex].getTimestamp();
 
     // ------
     // 2 gets and we wait more than 1 second (history frequency) to be sure the scheduler thread has computed a new stat in the history

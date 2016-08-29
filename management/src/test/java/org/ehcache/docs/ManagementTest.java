@@ -46,10 +46,13 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.management.config.EhcacheStatisticsProviderConfiguration;
 import org.ehcache.management.providers.statistics.StatsUtil;
+import org.junit.Ignore;
 
 public class ManagementTest {
 
-  @Test (timeout=10000)
+  private final EhcacheStatisticsProviderConfiguration EHCACHE_STATS_CONFIG = new EhcacheStatisticsProviderConfiguration(1,TimeUnit.MINUTES,100,1,TimeUnit.MILLISECONDS,10,TimeUnit.MINUTES);
+
+  @Test //(timeout=10000)
   public void usingManagementRegistry() throws Exception {
     // tag::usingManagementRegistry[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class,
@@ -57,6 +60,7 @@ public class ManagementTest {
         .build();
 
     DefaultManagementRegistryConfiguration registryConfiguration = new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager"); // <1>
+    registryConfiguration.addConfiguration(EHCACHE_STATS_CONFIG);
     ManagementRegistryService managementRegistry = new DefaultManagementRegistryService(registryConfiguration); // <2>
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("aCache", cacheConfiguration)
@@ -93,10 +97,13 @@ public class ManagementTest {
 
     while(!StatsUtil.isHistoryReady(onHeapStore_Hit_Count, 0L)) {}
     while(!StatsUtil.isHistoryReady(offHeapStore_Hit_Count, 0L)) {}
-    Assert.assertThat(onHeapStore_Hit_Count.getValue()[0].getValue() + offHeapStore_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
+    int onHeapMostRecentIndex = onHeapStore_Hit_Count.getValue().length - 1;
+    int offHeapMostRecentIndex = offHeapStore_Hit_Count.getValue().length - 1;
+    Assert.assertThat(onHeapStore_Hit_Count.getValue()[onHeapMostRecentIndex].getValue() + offHeapStore_Hit_Count.getValue()[offHeapMostRecentIndex].getValue(), Matchers.equalTo(4L)); // <7>
 
     while(!StatsUtil.isHistoryReady(cache_Hit_Count, 0L)) {}
-    Assert.assertThat(cache_Hit_Count.getValue()[0].getValue(), Matchers.equalTo(4L)); // <7>
+    int cacheMostRecentIndex = cache_Hit_Count.getValue().length - 1;
+    Assert.assertThat(cache_Hit_Count.getValue()[cacheMostRecentIndex].getValue(), Matchers.equalTo(4L)); // <7>
 
     while(!StatsUtil.isHistoryReady(onHeapStore_Eviction_Count, 0L)) {}
     while(!StatsUtil.isHistoryReady(offHeapStore_Mapping_Count, 0L)) {}
@@ -186,18 +193,16 @@ public class ManagementTest {
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, ResourcePoolsBuilder.heap(10))
         .build();
 
-    EhcacheStatisticsProviderConfiguration config = new EhcacheStatisticsProviderConfiguration(1,TimeUnit.MINUTES,100,1,TimeUnit.MILLISECONDS,10,TimeUnit.MINUTES);
-
     SharedManagementService sharedManagementService = new DefaultSharedManagementService(); // <1>
     CacheManager cacheManager1 = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("aCache", cacheConfiguration)
-        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-1").addConfiguration(config))
+        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-1").addConfiguration(EHCACHE_STATS_CONFIG))
         .using(sharedManagementService) // <2>
         .build(true);
 
     CacheManager cacheManager2 = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("aCache", cacheConfiguration)
-        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-2").addConfiguration(config))
+        .using(new DefaultManagementRegistryConfiguration().setCacheManagerAlias("myCacheManager-2").addConfiguration(EHCACHE_STATS_CONFIG))
         .using(sharedManagementService) // <3>
         .build(true);
 
