@@ -26,8 +26,8 @@ import org.terracotta.management.model.stats.AbstractStatisticHistory;
  */
 public class StatsUtil {
 
-  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, Double defaultValue)
-  {
+  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, Double defaultValue) {
+
     if(counterHistory.getValue().length > 0) {
       int mostRecentIndex = counterHistory.getValue().length - 1;
       if(defaultValue.equals(Double.POSITIVE_INFINITY)) {
@@ -44,16 +44,14 @@ public class StatsUtil {
     return false;
   }
 
-  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory)
-  {
+  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory) {
     if(counterHistory.getValue().length > 0) {
       return true;
     }
     return false;
   }
 
-  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, Long defaultValue)
-  {
+  public static boolean isHistoryReady(AbstractStatisticHistory counterHistory, Long defaultValue) {
     if(counterHistory.getValue().length > 0) {
       int mostRecentIndex = counterHistory.getValue().length - 1;
       if((Long)counterHistory.getValue()[mostRecentIndex].getValue() > defaultValue) {
