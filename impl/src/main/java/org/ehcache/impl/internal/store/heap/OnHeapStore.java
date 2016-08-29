@@ -277,16 +277,6 @@ public class OnHeapStore<K, V> implements Store<K,V>, HigherCachingTier<K, V> {
         return map.mappingCount();
       }
     });
-    StatisticsManager.createPassThroughStatistic(this, "allocatedMemory", tags, properties, new Callable<Number>() {
-      @Override
-      public Number call() throws Exception {
-        if (byteSized) {
-          return capacity;
-        } else {
-          return -1L;
-        }
-      }
-    });
     StatisticsManager.createPassThroughStatistic(this, "occupiedMemory", tags, properties, new Callable<Number>() {
       @Override
       public Number call() throws Exception {
