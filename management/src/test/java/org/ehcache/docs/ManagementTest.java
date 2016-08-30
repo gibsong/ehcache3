@@ -46,7 +46,6 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.management.config.EhcacheStatisticsProviderConfiguration;
 import org.ehcache.management.providers.statistics.StatsUtil;
-import org.junit.Ignore;
 
 public class ManagementTest {
 

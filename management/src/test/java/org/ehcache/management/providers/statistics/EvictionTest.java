@@ -43,7 +43,6 @@ import org.ehcache.management.registry.DefaultManagementRegistryService;
 import org.ehcache.spi.service.Service;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -57,7 +56,6 @@ import org.terracotta.management.model.stats.history.CounterHistory;
  *
  *
  */
-@Ignore
 @RunWith(Parameterized.class)
 public class EvictionTest {
 
