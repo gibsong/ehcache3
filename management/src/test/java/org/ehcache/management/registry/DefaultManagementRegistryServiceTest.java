@@ -109,7 +109,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(37));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(35));
 
     cacheManager1.close();
   }
@@ -134,7 +134,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(57));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(55));
 
     cacheManager1.close();
   }
@@ -161,7 +161,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(57));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(55));
 
     persistentCacheManager.close();
   }
@@ -190,7 +190,7 @@ public class DefaultManagementRegistryServiceTest {
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(3).getName(), equalTo("SettingsCapability"));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getDescriptors(), hasSize(4));
-    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(37));
+    assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getDescriptors(), hasSize(35));
 
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(0).getCapabilityContext().getAttributes(), hasSize(2));
     assertThat(new ArrayList<Capability>(managementRegistry.getCapabilities()).get(1).getCapabilityContext().getAttributes(), hasSize(2));
