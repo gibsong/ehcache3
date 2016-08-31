@@ -329,7 +329,6 @@ public class EhcacheActiveEntityTest {
     ServerStoreConfiguration serverStoreConfiguration = new ServerStoreConfigBuilder()
         .dedicated("serverResource1", 4, MemoryUnit.MEGABYTES)
         .consistency(Consistency.STRONG)
-        .concurrency(1)
         .build();
     assertSuccess(
         activeEntity.invoke(client1,
@@ -512,7 +511,6 @@ public class EhcacheActiveEntityTest {
     ServerStoreConfiguration serverStoreConfiguration = new ServerStoreConfigBuilder()
         .dedicated("serverResource1", 4, MemoryUnit.MEGABYTES)
         .consistency(Consistency.STRONG)
-        .concurrency(1)
         .build();
     assertSuccess(
         activeEntity.invoke(client1,
@@ -687,7 +685,6 @@ public class EhcacheActiveEntityTest {
     ServerStoreConfiguration serverStoreConfiguration = new ServerStoreConfigBuilder()
         .dedicated("serverResource1", 4, MemoryUnit.MEGABYTES)
         .consistency(Consistency.STRONG)
-        .concurrency(1)
         .build();
     assertSuccess(
         activeEntity.invoke(client1,
@@ -887,7 +884,6 @@ public class EhcacheActiveEntityTest {
 
     ServerStoreConfiguration serverStoreConfiguration = new ServerStoreConfigBuilder()
         .dedicated("serverResource1", 4, MemoryUnit.MEGABYTES)
-        .concurrency(1)
         .build();
     assertSuccess(
         activeEntity.invoke(client,
