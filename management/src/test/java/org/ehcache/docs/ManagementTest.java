@@ -51,7 +51,7 @@ public class ManagementTest {
 
   private final EhcacheStatisticsProviderConfiguration EHCACHE_STATS_CONFIG = new EhcacheStatisticsProviderConfiguration(1,TimeUnit.MINUTES,100,1,TimeUnit.MILLISECONDS,10,TimeUnit.MINUTES);
 
-  @Test //(timeout=10000)
+  @Test (timeout=10000)
   public void usingManagementRegistry() throws Exception {
     // tag::usingManagementRegistry[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class,
@@ -186,7 +186,7 @@ public class ManagementTest {
   }
 
   //TODO update managingMultipleCacheManagers() documentation/asciidoc
-  @Test //(timeout = 10000)
+  @Test (timeout = 10000)
   public void managingMultipleCacheManagers() throws Exception {
     // tag::managingMultipleCacheManagers[]
     CacheConfiguration<Long, String> cacheConfiguration = CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, String.class, ResourcePoolsBuilder.heap(10))
@@ -216,6 +216,8 @@ public class ManagementTest {
     Cache<Long, String> cache = cacheManager1.getCache("aCache", Long.class, String.class);
     cache.get(1L);//cache miss
     cache.get(2L);//cache miss
+
+     Thread.sleep(1000);
 
     ResultSet<ContextualStatistics> counters = sharedManagementService.withCapability("StatisticsCapability")
         .queryStatistic("Cache:MissCount")
