@@ -621,7 +621,8 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
 
 
       ClusteredStore<K, V> store = new ClusteredStore<K, V>(codec, resolver, timeSource);
-      createdStores.put(store, new StoreConfig(cacheId, storeConfig, clusteredStoreConfiguration.getConsistency(), clusteredStoreConfiguration.getConcurrency()));
+
+      createdStores.put(store, new StoreConfig(cacheId, storeConfig, clusteredStoreConfiguration.getConsistency()));
 
       return store;
     }
@@ -643,7 +644,7 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
       }
       final ClusteredStore clusteredStore = (ClusteredStore) resource;
       try {
-        clusteredStore.storeProxy = clusteringService.getServerStoreProxy(storeConfig.getCacheIdentifier(), storeConfig.getStoreConfig(), storeConfig.getConsistency(), storeConfig.getConcurrency());
+        clusteredStore.storeProxy = clusteringService.getServerStoreProxy(storeConfig.getCacheIdentifier(), storeConfig.getStoreConfig(), storeConfig.getConsistency());
       } catch (CachePersistenceException e) {
         throw new RuntimeException("Unable to create clustered tier proxy - " + storeConfig.getCacheIdentifier(), e);
       }
@@ -751,13 +752,11 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
     private final ClusteredCacheIdentifier cacheIdentifier;
     private final Store.Configuration storeConfig;
     private final Consistency consistency;
-    private final int concurrency;
 
-    StoreConfig(ClusteredCacheIdentifier cacheIdentifier, Configuration storeConfig, Consistency consistency, int concurrency) {
+    StoreConfig(ClusteredCacheIdentifier cacheIdentifier, Configuration storeConfig, Consistency consistency) {
       this.cacheIdentifier = cacheIdentifier;
       this.storeConfig = storeConfig;
       this.consistency = consistency;
-      this.concurrency = concurrency;
     }
 
     public Configuration getStoreConfig() {
@@ -770,10 +769,6 @@ public class ClusteredStore<K, V> implements AuthoritativeTier<K, V> {
 
     public Consistency getConsistency() {
       return consistency;
-    }
-
-    public int getConcurrency() {
-      return concurrency;
     }
   }
 }
