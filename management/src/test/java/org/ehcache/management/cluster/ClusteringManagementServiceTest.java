@@ -57,6 +57,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.junit.Assert.assertThat;
+import org.junit.Ignore;
 
 @RunWith(Parameterized.class)
 public class ClusteringManagementServiceTest extends AbstractClusteringManagementTest {
