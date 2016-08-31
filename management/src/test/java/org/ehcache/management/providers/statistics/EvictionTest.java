@@ -117,8 +117,10 @@ public class EvictionTest {
     Collection<Service> services = new ArrayList<>();
     services.add(managementRegistry);
 
-    try (CacheManager cacheManager = new EhcacheManager(config, services)) {
+    CacheManager cacheManager = null;
 
+    try {
+      cacheManager = new EhcacheManager(config, services);
       CacheConfiguration<Long, byte[]> cacheConfig = newCacheConfigurationBuilder(Long.class, byte[].class, resources).build();
 
       cacheManager.init();
@@ -165,6 +167,11 @@ public class EvictionTest {
         mostRecentIndex = evictionMiddleTierCounterHistory.getValue().length - 1;
         Assert.assertThat(evictionMiddleTierCounterHistory.getValue()[mostRecentIndex].getValue(), Matchers.equalTo(expected.get(1)));
 
+      }
+    }
+    finally {
+      if(cacheManager != null) {
+        cacheManager.close();
       }
     }
   }

@@ -55,10 +55,13 @@ public class StandardEhcacheStatisticsTest {
         Long.class, String.class, ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB).offheap(10, MemoryUnit.MB))
         .build();
 
-    try (CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+    CacheManager cacheManager = null;
+
+    try {
+      cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
           .withCache("aCache", cacheConfiguration)
           .using(managementRegistry)
-          .build(true)) {
+          .build(true);
 
       Cache<Long, String> cache = cacheManager.getCache("aCache", Long.class, String.class);
       cache.put(1L, "one");
@@ -96,6 +99,11 @@ public class StandardEhcacheStatisticsTest {
       mostRecentIndex = ratioHistory.getValue().length - 1;
       Assert.assertThat(ratioHistory.getValue()[mostRecentIndex].getValue(), Matchers.equalTo(1d));
     }
+    finally {
+      if(cacheManager != null) {
+        cacheManager.close();
+      }
+    }
   }
 
   @Test
@@ -108,10 +116,13 @@ public class StandardEhcacheStatisticsTest {
         ResourcePoolsBuilder.newResourcePoolsBuilder().heap(1, MemoryUnit.MB).offheap(10, MemoryUnit.MB))
         .build();
 
-    try (CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+    CacheManager cacheManager = null;
+
+    try {
+      cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
           .withCache("bCache", cacheConfiguration)
           .using(managementRegistry)
-          .build(true)) {
+          .build(true);
 
       Cache<Long, String> cache = cacheManager.getCache("bCache", Long.class, String.class);
       cache.put(1L, "1");
@@ -151,6 +162,11 @@ public class StandardEhcacheStatisticsTest {
       mostRecentIndex = ratioHistory.getValue().length - 1;
       Assert.assertThat(ratioHistory.getValue()[mostRecentIndex].getValue(), Matchers.equalTo(3d));
     }
+    finally {
+      if(cacheManager != null) {
+        cacheManager.close();
+      }
+    }
   }
 
   @Test
@@ -163,40 +179,47 @@ public class StandardEhcacheStatisticsTest {
     ManagementRegistryService managementRegistry = new DefaultManagementRegistryService(registryConfiguration);
     registryConfiguration.addConfiguration(EHCACHE_STATS_CONFIG);
 
-    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+    CacheManager cacheManager = null;
+
+    try {
+      cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
         .withCache("cCache", cacheConfiguration)
         .using(managementRegistry)
         .build(true);
 
-    Cache<Long, String> aCache = cacheManager.getCache("cCache", Long.class, String.class);
-    aCache.put(1L, "one");
-    Assert.assertTrue(aCache.containsKey(1L));
-    aCache.clear();
-    Assert.assertFalse(aCache.iterator().hasNext());
+      Cache<Long, String> aCache = cacheManager.getCache("cCache", Long.class, String.class);
+      aCache.put(1L, "one");
+      Assert.assertTrue(aCache.containsKey(1L));
+      aCache.clear();
+      Assert.assertFalse(aCache.iterator().hasNext());
 
-    aCache.put(1L, "one");
-    Assert.assertTrue(aCache.containsKey(1L));
-    aCache.clear();
-    Assert.assertFalse(aCache.iterator().hasNext());
+      aCache.put(1L, "one");
+      Assert.assertTrue(aCache.containsKey(1L));
+      aCache.clear();
+      Assert.assertFalse(aCache.iterator().hasNext());
 
-    Thread.sleep(1000);
+      Thread.sleep(1000);
 
-    Context context = StatsUtil.createContext(managementRegistry);
+      Context context = StatsUtil.createContext(managementRegistry);
 
-    ContextualStatistics clearCounter = managementRegistry.withCapability("StatisticsCapability")
-        .queryStatistics(Arrays.asList("Cache:ClearCount"))
-        .on(context)
-        .build()
-        .execute()
-        .getSingleResult();
+      ContextualStatistics clearCounter = managementRegistry.withCapability("StatisticsCapability")
+          .queryStatistics(Arrays.asList("Cache:ClearCount"))
+          .on(context)
+          .build()
+          .execute()
+          .getSingleResult();
 
-    Assert.assertThat(clearCounter.size(), Matchers.is(1));
-    CounterHistory cache_Clear_Count = clearCounter.getStatistic(CounterHistory.class, "Cache:ClearCount");
+      Assert.assertThat(clearCounter.size(), Matchers.is(1));
+      CounterHistory cache_Clear_Count = clearCounter.getStatistic(CounterHistory.class, "Cache:ClearCount");
 
-    while(!StatsUtil.isHistoryReady(cache_Clear_Count, 0L)) {}
-    int mostRecentIndex = cache_Clear_Count.getValue().length - 1;
-    Assert.assertThat(cache_Clear_Count.getValue()[mostRecentIndex].getValue(), Matchers.equalTo(2L));
-
-    cacheManager.close();
+      while(!StatsUtil.isHistoryReady(cache_Clear_Count, 0L)) {}
+      int mostRecentIndex = cache_Clear_Count.getValue().length - 1;
+      Assert.assertThat(cache_Clear_Count.getValue()[mostRecentIndex].getValue(), Matchers.equalTo(2L));
+    }
+    finally {
+      if(cacheManager != null) {
+        cacheManager.close();
+      }
+    }
   }
 }
